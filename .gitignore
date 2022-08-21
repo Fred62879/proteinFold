@@ -1,0 +1,10 @@
+
+*~
+
+alphafold/
+parafold/
+dmasif/
+masif/
+interview/
+peptide/
+**/__pycache__/**
