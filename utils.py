@@ -160,6 +160,9 @@ def remove_linker(pred_fn, out_fn, linker_len, chain_names,
         gt_chain_bd_ids: id of two boundary residue of each chain (from gt pdb)
     '''
 
+    if os.path.exists(out_fn):
+        return
+
     residues = read_residue_from_pdb(pred_fn)[0]
     for i in range(1, len(chain_start_ids)-1):
         id = chain_start_ids[i] - 1 # 1-based to 0-based
@@ -215,29 +218,69 @@ def remove_linker(pred_fn, out_fn, linker_len, chain_names,
     ppdb.df['ATOM'] = df
     ppdb.to_pdb(out_fn)
 
-def calculate_rmsd(gt_pdb_fn, pred_pdb_fn, chain_names):
+def calculate_rmsd(gt_pdb_fn, pred_pdb_fn, chain_names, backbone=False, remove_hydrogen=False):
     ''' calculate rmsd between gt and pred
 
         superimpose pred onto gt (with receptor only)
-          assume chain_names[0] is the receptor chain name
+          assume chain_names[-1] is the target chain
+          (e.g. peptide or idr)
     '''
+
+    rmsds = []
+
     cmd.load(gt_pdb_fn, 'native')
     cmd.load(pred_pdb_fn, 'pred')
 
-    r_name, o_name = chain_names
-    cmd.select('pred_R', f'pred and chain {r_name}')
-    cmd.select('pred_O', f'pred and chain {o_name}')
-    cmd.select('native_R', f'native and chain {r_name}')
-    cmd.select('native_O', f'native and chain {o_name}')
+    # remove hydrogens (presented in af prediction)
+    if remove_hydrogen:
+        cmd.remove('hydrogens')
 
-    metrics = cmd.align('native_O','pred_O')
+    target_name = chain_names[-1]
+    target_chain_selector = f'chain {target_name}'
+    major_chain_selector = f'not chain {target_name}'
+
+    if backbone:
+        target_chain_selector += ' and backbone'
+        major_chain_selector += ' and backbone'
+
+    cmd.select('pred_M', f'pred and {major_chain_selector}')
+    cmd.select('pred_T', f'pred and {target_chain_selector}')
+    cmd.select('native_M', f'native and {major_chain_selector}')
+    cmd.select('native_T', f'native and {target_chain_selector}')
+
+    # calculate rmsd without superimposing the major chains (sanity check)
+    # two proteins in this case are far apart from each other and thus this
+    # rmsd should be way larger than those above
+    metrics = cmd.rms_cur('native_T','pred_T')
+    print(metrics)
+    rmsds.append(metrics)
+
+    # superimpose major chains and calculate rmsd for target chains
+    super = cmd.super('native_M','pred_M')
+    metrics = cmd.rms_cur('native_T','pred_T')
+    print(metrics)
+    rmsds.append(metrics)
+    metrics = cmd.rms_cur('native_M','pred_M')
     print(metrics)
 
-    # superimpose pred onto gt
-    super = cmd.super('pred_R','native_R')
-    metrics = cmd.align('pred_O','native_O')
+    # superimpose target chains
+    # if target chains are not spatially matched well
+    # this rmsd would be extremely large
+    super = cmd.super('native_T','pred_T')
+    metrics = cmd.rms_cur('native_M','pred_M')
     print(metrics)
+    rmsds.append(metrics)
 
+    # rmsd after aligning target chain
+    metrics = cmd.align('native_T','pred_T')
+    print(metrics)
+    rmsds.append(metrics[0])
+
+    # rmsd after aligning major chain
+    metrics = cmd.align('native_M','pred_M')
+    print(metrics)
+    rmsds.append(metrics[0])
+    return rmsds
 
 def reorder_csv(in_file, out_file, colnames):
     with open(in_file, 'r') as infile, open(out_file, 'a') as outfile:
