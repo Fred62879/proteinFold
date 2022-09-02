@@ -63,22 +63,6 @@ def find_subseq_range(seq1, seq2):
             return np.array([[0,i],[i+m,n]])
     assert(False)
 
-def find_x_range(seq):
-    ''' find range of unknown aa subseq in seq '''
-    start, in_X, n = -1, False, len(seq)
-    ranges = []
-    for i in range(n):
-        if seq[i] == 'X':
-            if not in_X:
-                in_X, start = True, i
-        elif in_X:
-            ranges.append([start,i])
-            start, in_X = -1, False
-
-    if start != -1:
-        ranges.append([start,n])
-    return np.array(ranges)
-
 def find_prune_ranges_all_chains(seqs1, seqs2, prune_X=True):
     ''' assume seq in seqs1 is longer than corresponding seq in seq2
     '''
@@ -99,32 +83,6 @@ def find_prune_ranges_all_chains(seqs1, seqs2, prune_X=True):
         acc_len += len(seq1)
 
     return (np.array(rnge1), np.array(rnge2))
-
-def prune_seq_given_range(df, rnge, to_remove_atom_ids, shift=True):
-    ''' remove atoms falling within residue id lo (inclusive) and hi (exclusive)
-    '''
-    (resid_lo,resid_hi) = rnge
-    if resid_lo == resid_hi: return
-
-    if shift: resid_lo +=1; resid_hi += 1
-    atom_ids = df[ (df['residue_number'] >= resid_lo) &
-                   (df['residue_number'] < resid_hi) ].index
-    to_remove_atom_ids.extend(atom_ids)
-
-def prune_seq_given_ranges(in_fn, out_fn, ranges, shift=True):
-    #if len(ranges) == 0: return
-    ppdb = PandasPdb()
-    _ = ppdb.read_pdb(in_fn)
-    df = ppdb.df['ATOM']
-    to_remove_atom_ids = []
-
-    for rnge in ranges:
-        prune_seq_given_range(df, rnge, to_remove_atom_ids, shift=shift)
-    df.drop(to_remove_atom_ids, axis=0, inplace=True)
-
-    ppdb.df['ATOM'] = df
-    ppdb.to_pdb(out_fn)
-    print(read_fasta_from_pdb(out_fn))
 
 def match_seq(fasta1, fasta2, ranges):
     ''' prune fasta2 so it match fasta1 exactly

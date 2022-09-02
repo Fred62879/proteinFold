@@ -1,5 +1,6 @@
 
 import os
+import csv
 import pandas
 import numpy as np
 
@@ -14,6 +15,14 @@ from functools import reduce
 from biopandas.pdb import PandasPdb
 from Bio.SeqRecord import SeqRecord
 
+def write_to_csv(data, out_fn):
+    #print(out_fn)
+    with open(out_fn, 'w', newline='') as fp:
+        writer = csv.writer(fp)
+        for row in data:
+            writer.writerow(row)
+    #np.savetxt(args.rmsd_fn, np.array(rmsds),delimiter=',',
+    #           header=args.rmsd_names,comments='')
 
 def read_fasta(fn):
     fasta_sequences = SeqIO.parse(open(fn),'fasta')
@@ -34,7 +43,65 @@ def read_residue_from_pdb(fn, print=False):
                 fastas.append(str(record.seq))
     return fastas
 
-def generate_fasta_from_pdb(in_dir, out_dir, pdb_ids, n_g):
+def find_x_range(seq):
+    ''' find range of unknown aa subseq in seq
+        output range is lower incluside, upper exclusive
+    '''
+    start, in_X, n = -1, False, len(seq)
+    ranges = []
+    for i in range(n):
+        if seq[i] == 'X':
+            if not in_X:
+                in_X, start = True, i+1
+        elif in_X:
+            ranges.append([start,i+1])
+            start, in_X = -1, False
+
+    if start != -1:
+        ranges.append([start,n])
+    return np.array(ranges)
+
+def prune_seq_given_range(df, rnge, chain_id, to_remove_atom_ids):
+    ''' remove atoms falling within residue id lo (inclusive) and hi (exclusive)
+    '''
+    (resid_lo,resid_hi) = rnge
+    if resid_lo == resid_hi: return
+
+    atom_ids = df[ df['chain_id'] == chain_id &
+                   df['residue_number'] >= resid_lo &
+                   df['residue_number'] < resid_hi ].index
+    to_remove_atom_ids.extend(atom_ids)
+
+def prune_seq_given_ranges(in_fn, out_fn, chain_ids, ranges):
+    #if len(ranges) == 0: return
+    ppdb = PandasPdb()
+    _ = ppdb.read_pdb(in_fn)
+    df = ppdb.df['ATOM']
+    to_remove_atom_ids = []
+
+    for cur_ranges, chain_id in zip(ranges, chain_ids):
+        for rnge in cur_ranges:
+            prune_seq_given_range(df, rnge, chain_id, to_remove_atom_ids)
+        df.drop(to_remove_atom_ids, axis=0, inplace=True)
+
+    ppdb.df['ATOM'] = df
+    ppdb.to_pdb(out_fn)
+    #print(read_fasta_from_pdb(out_fn))
+
+def remove_x_from_pdb(dir, pdb_ids):
+    for pdb_id in pdb_ids:
+        in_fn = join(dir, pdb_id + '.pdb')
+        out_fn = join(dir, pdb_id + '.pdb')
+        seq = read_residue_from_pdb(in_fn)
+        ranges = find_x_range(seq)
+        prune_seq_given_ranges(in_fn, out_fn, ranges)
+
+
+def trim_x(seq):
+    ''' remove 'X' from sequence '''
+    return seq.replace('X','')
+
+def generate_fasta_from_pdb(in_dir, out_dir, pdb_ids, n_g, remove_x=False):
     ''' generate source fasta based on gt pdb
           and polyg link all chains
         also record residue id (1-based continuous between chains
@@ -46,6 +113,8 @@ def generate_fasta_from_pdb(in_dir, out_dir, pdb_ids, n_g):
     for id in pdb_ids:
         in_fn = join(in_dir, id + '.pdb')
         seqs = read_residue_from_pdb(in_fn)
+        if remove_x:
+            seqs = [trim_x(seq) for seq in seqs]
         fasta = reduce(lambda acc, seq: acc + seq + linker, seqs, '')[:-n_g]
 
         acc, start_ids = 1, []
@@ -184,6 +253,7 @@ def remove_linker(pred_fn, out_fn, linker_len, chain_names,
 
         # make sure gt and pred chain has same length
         gt_resid_lo, gt_resid_hi = gt_chain_bd_ids[i]
+        print(resid_lo, resid_hi, gt_resid_lo, gt_resid_hi)
         assert(gt_resid_hi - gt_resid_lo + 1 == resid_hi - resid_lo)
 
         # locate all atoms in pred pdb for current chain
@@ -218,7 +288,7 @@ def remove_linker(pred_fn, out_fn, linker_len, chain_names,
     ppdb.df['ATOM'] = df
     ppdb.to_pdb(out_fn)
 
-def calculate_rmsd(gt_pdb_fn, pred_pdb_fn, chain_names, backbone=False, remove_hydrogen=False):
+def calculate_rmsd(gt_pdb_fn, pred_pdb_fn, complex_fn, chain_names, backbone=False, remove_hydrogen=False):
     ''' calculate rmsd between gt and pred
 
         superimpose pred onto gt (with receptor only)
@@ -227,7 +297,7 @@ def calculate_rmsd(gt_pdb_fn, pred_pdb_fn, chain_names, backbone=False, remove_h
     '''
 
     rmsds = []
-
+    cmd.delete('all')
     cmd.load(gt_pdb_fn, 'native')
     cmd.load(pred_pdb_fn, 'pred')
 
@@ -237,38 +307,45 @@ def calculate_rmsd(gt_pdb_fn, pred_pdb_fn, chain_names, backbone=False, remove_h
 
     target_name = chain_names[-1]
     target_chain_selector = f'chain {target_name}'
-    major_chain_selector = f'not chain {target_name}'
+    receptor_chain_selector = f'not chain {target_name}'
 
     if backbone:
         target_chain_selector += ' and backbone'
-        major_chain_selector += ' and backbone'
+        receptor_chain_selector += ' and backbone'
 
-    cmd.select('pred_M', f'pred and {major_chain_selector}')
+    cmd.select('pred_R', f'pred and {receptor_chain_selector}')
     cmd.select('pred_T', f'pred and {target_chain_selector}')
-    cmd.select('native_M', f'native and {major_chain_selector}')
+    cmd.select('native_R', f'native and {receptor_chain_selector}')
     cmd.select('native_T', f'native and {target_chain_selector}')
 
-    # calculate rmsd without superimposing the major chains (sanity check)
+    # calculate rmsd without superimposing the receptor chains (sanity check)
     # two proteins in this case are far apart from each other and thus this
     # rmsd should be way larger than those above
     metrics = cmd.rms_cur('native_T','pred_T')
-    print(metrics)
+    #print(metrics)
     rmsds.append(metrics)
 
-    # superimpose major chains and calculate rmsd for target chains
-    super = cmd.super('native_M','pred_M')
+    # superimpose receptor chains and calculate rmsd for target chains
+    super = cmd.super('native_R','pred_R')
+
+    # save two objects after superimposing receptor chain
+    cmd.color('blue','native')
+    cmd.color('yellow','pred')
+    cmd.multisave(complex_fn, 'all', format='pdb')
+
     metrics = cmd.rms_cur('native_T','pred_T')
-    print(metrics)
+    #print(metrics)
     rmsds.append(metrics)
-    metrics = cmd.rms_cur('native_M','pred_M')
-    print(metrics)
+    metrics = cmd.rms_cur('native_R','pred_R')
+    #print(metrics)
+    rmsds.append(metrics)
 
     # superimpose target chains
     # if target chains are not spatially matched well
     # this rmsd would be extremely large
     super = cmd.super('native_T','pred_T')
-    metrics = cmd.rms_cur('native_M','pred_M')
-    print(metrics)
+    metrics = cmd.rms_cur('native_R','pred_R')
+    #print(metrics)
     rmsds.append(metrics)
 
     # rmsd after aligning target chain
@@ -276,10 +353,12 @@ def calculate_rmsd(gt_pdb_fn, pred_pdb_fn, chain_names, backbone=False, remove_h
     print(metrics)
     rmsds.append(metrics[0])
 
-    # rmsd after aligning major chain
-    metrics = cmd.align('native_M','pred_M')
+    # rmsd after aligning receptor chain
+    metrics = cmd.align('native_R','pred_R')
     print(metrics)
     rmsds.append(metrics[0])
+
+    rmsds = [round(rmsd,2) for rmsd in rmsds]
     return rmsds
 
 def reorder_csv(in_file, out_file, colnames):

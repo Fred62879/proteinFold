@@ -1,20 +1,23 @@
 #!/bin/bash
 
 server=narval
-#exps=(idr_84_pf_full/poly_g_6)
-#seqs=(1CQ.fasta 2AZE.fasta 2M3M.fasta 2QTV.fasta 2RSN.fasta 4U7T.fasta)
 exps=(idr_84_af_full/poly_g_6)
+seqs=(2QTV.fasta)
+#seqs=(1CQ.fasta 2AZE.fasta 2M3M.fasta 2QTV.fasta 2RSN.fasta 4U7T.fasta)
 #seqs=(1AWR.fasta 1CZY.fasta 1EG4.fasta 1ELW.fasta 1ER8.fasta 1JD5.fasta)
-seqs=(2AZE.fasta)
 
 #############
 #upload data
 #############
 upload_data=false
-cc_dir='fred862@${server}.computecanada.ca:~/scratch/fred862/data/bioinfo/input/seq_to_pred/peptide/poly_g_6'
-local_dir='../data/input/peptide/poly_g_6/*'
 
 if $upload_data; then
+
+    for exp in ${exps[@]} ; do
+        cc_dir="fred862@${server}.computecanada.ca:~/scratch/fred862/data/bioinfo/input/seq_to_pred/idr_84/poly_g_6"
+        local_dir="../data/input/idr_84/poly_g_6/2QTV.fasta"
+    done
+
     scp $local_dir $cc_dir
 fi
 
