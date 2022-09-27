@@ -1,4 +1,55 @@
 
+def count_num_atoms_each_residue(pdb_fn):
+    ppdb = PandasPdb()
+    _ = ppdb.read_pdb(pdb_fn)
+    df = ppdb.df['ATOM']
+    n = df.shape[0]
+
+    num_atoms = []
+    start_atom_id = 0
+    prev_id = df.loc[0,'residue_number']
+    resid_ids = [prev_id]
+
+    for atom_id in range(1, n):
+       cur_id = df.loc[atom_id, 'residue_number']
+       if cur_id != prev_id:
+           num_atoms.append(atom_id - start_atom_id)
+           start_atom_id = atom_id
+           prev_id = cur_id
+
+    num_atoms.append(n - start_atom_id)
+    return num_atoms
+
+def trim_x(seq):
+    ''' remove 'X' from sequence '''
+    return seq.replace('X','')
+
+def remove_x_from_pdb(dir, pdb_ids):
+    for pdb_id in pdb_ids:
+        in_fn = join(dir, pdb_id + '.pdb')
+        out_fn = join(dir, pdb_id + '.pdb')
+        seq = read_residue_from_pdb(in_fn)
+        ranges = find_x_range(seq)
+        prune_seq_given_ranges(in_fn, out_fn, ranges)
+
+def find_x_range(seq):
+    ''' find range of unknown aa subseq in seq
+        output range is lower incluside, upper exclusive
+    '''
+    start, in_X, n = -1, False, len(seq)
+    ranges = []
+    for i in range(n):
+        if seq[i] == 'X':
+            if not in_X:
+                in_X, start = True, i+1
+        elif in_X:
+            ranges.append([start,i+1])
+            start, in_X = -1, False
+
+    if start != -1:
+        ranges.append([start,n])
+    return np.array(ranges)
+
 def read_residue_id_from_pdb(pdb_fn):
     ppdb = PandasPdb()
     _ = ppdb.read_pdb(pdb_fn)
@@ -55,34 +106,6 @@ def split_chains_wo_env(fn, model='native', create=False, select=False, split_on
         else:          cmd.disable(model)
 
     return chains
-
-def find_subseq_range(seq1, seq2):
-    n, m = len(seq1), len(seq2)
-    for i in range(n):
-        if seq1[i:i+m] == seq2:
-            return np.array([[0,i],[i+m,n]])
-    assert(False)
-
-def find_prune_ranges_all_chains(seqs1, seqs2, prune_X=True):
-    ''' assume seq in seqs1 is longer than corresponding seq in seq2
-    '''
-    acc_len = 0
-    rnge1, rnge2 = [], []
-    for seq1, seq2 in zip(seqs1, seqs2):
-        if prune_X:
-            cur_rnge1 = find_x_range(seq1)
-            if len(cur_rnge1) != 0:
-                rnge1.extend(list(cur_rnge1 + acc_len))
-            cur_rnge2 = find_x_range(seq2)
-            if len(cur_rnge2) != 0:
-                rnge2.extend(list(cur_rnge2 + acc_len))
-        else:
-            cur_rnge = find_subseq_range(seq1, seq2)
-            if len(cur_rnge) != 0:
-                rnge1.extend(list(cur_rnge + acc_len))
-        acc_len += len(seq1)
-
-    return (np.array(rnge1), np.array(rnge2))
 
 def match_seq(fasta1, fasta2, ranges):
     ''' prune fasta2 so it match fasta1 exactly
@@ -189,49 +212,6 @@ def reorder_residues(dir, pdb_ids, reorder_fn_str):
         out_fn = join(dir, pdb_id + '_' + reorder_fn_str + '.pdb')
         reorder_residue(gt_fn, out_fn)
 
-def parse_to_groups(dir):
-    prev_id = ''
-    cur_group, groups = [], []
-
-    fns = sorted(os.listdir(dir))
-    for fn in fns:
-        cur_id = fn.split('_')[0]
-        if cur_id != prev_id:
-           groups.append(cur_group)
-           cur_group = [fn.split('.')[0]]
-           prev_id = cur_id
-        else:
-           cur_group.append(fn.split('.')[0])
-    groups.append(cur_group)
-    return groups[1:]
-
-def poly_g_link(indir, outdir, chain_start_ids, fasta_group, poly_g, n_g):
-    multimer = ''
-    cur_chain_start_ids = []
-    pdb_id = (fasta_group[0]).split('_')[0]
-
-    for fn in fasta_group:
-        monomer = read_fasta(join(indir, fn + '.fasta'))
-        cur_chain_start_ids.append(len(multimer))
-        multimer += monomer + poly_g
-
-    # add last start_id for convenience of polyg removal (for loop)
-    cur_chain_start_ids.append(len(multimer) + 1) # resid id 1-based
-    multimer = multimer[:-n_g]
-
-    ofn = join(outdir, pdb_id + '.fasta')
-    save_fasta(multimer, ofn, id=pdb_id)
-    chain_start_ids[pdb_id] = cur_chain_start_ids
-
-def poly_g_link_all(indir, outdir, fasta_groups, n_g):
-    poly_g = 'G' * n_g
-    chain_start_ids = {}
-
-    for fasta_group in fasta_groups:
-        poly_g_link(indir, outdir, chain_start_ids, fasta_group, poly_g, n_g)
-
-    return chain_start_ids
-
 
 #######
 # main
@@ -322,3 +302,115 @@ def process_input(args):
         pickle.dump(chain_names, fp)
 
     #cmd.quit()
+
+
+def reorder_csv(in_file, out_file, colnames):
+    with open(in_file, 'r') as infile, open(out_file, 'a') as outfile:
+        # output dict needs a list for new column ordering
+        writer = csv.DictWriter(outfile, fieldnames=colnames)
+        # reorder the header first
+        writer.writeheader()
+        for row in csv.DictReader(infile):
+            # writes the reordered rows to the new file
+            writer.writerow(row)
+
+def peptide_metric(pdb_ids, input_dir, output_dir, pred_fn, chain_names):
+    metrics = []
+
+    for id in pdb_ids[0:1]:
+    #for model_file in glob.glob(os.path.join(input_dir, 'linker_removed*.pdb')):
+	#model_name = os.path.basename(model_file).replace('.pdb', '')
+	#rank = int(str(rank_re.search(model_name).group(0)).replace('rank_', ''))
+	#model_no = int(str(model_re.search(model_name).group(0)).replace('model_', ''))
+        model_name = 'afold'
+        rank = 0
+        model_no = 'dum'
+        rec_chain, pep_chain = chain_names[id]
+        metrics_for_a_model = [model_name, id, rec_chain, pep_chain, rank, model_no]
+
+        model_file = join(output_dir, id + '.fasta', pred_fn)
+        native_file = join(input_dir, id + '.pdb')
+
+        cmd.load(native_file, 'native')
+        cmd.load(model_file, model_name)
+
+        print(model_name, rec_chain, pep_chain, model_file)
+        cmd.select("native_rec", f'native and chain {rec_chain}')
+        cmd.select("native_pep", f'native and chain {pep_chain}')
+
+        cmd.select("afold_rec", f'{model_name} and chain {rec_chain}')
+        cmd.select("afold_pep", f'{model_name} and chain {pep_chain}')
+
+        # align peptide chains
+        super_alignment_pep = cmd.super('afold_pep', 'native_pep')
+        metrics_for_a_model += tuple([float("{0:.2f}".format(n)) for n in super_alignment_pep])
+
+        seq_alignment_pep = cmd.align('afold_pep', 'native_pep')
+        metrics_for_a_model += tuple([float("{0:.2f}".format(n)) for n in seq_alignment_pep])
+
+        # align peptide chains backbone
+        super_alignment_pep = cmd.super('afold_pep and backbone', 'native_pep and backbone')
+        metrics_for_a_model += tuple([float("{0:.2f}".format(n)) for n in super_alignment_pep])
+
+        seq_alignment_pep = cmd.align('afold_pep and backbone', 'native_pep and backbone')
+        metrics_for_a_model += tuple([float("{0:.2f}".format(n)) for n in seq_alignment_pep])
+
+        # super receptor chains
+        super_alignment_rec = cmd.super('afold_rec', 'native_rec')
+        metrics_for_a_model += tuple([float("{0:.2f}".format(n)) for n in super_alignment_rec])
+
+        # save the superimposed structure
+        cmd.select('model_to_save', model_name)
+        super_filename=f'{model_name}_superimposed.pdb'
+        print(super_filename)
+        save_to_file = os.path.join(input_dir, super_filename)
+        cmd.save(save_to_file, model_name, format='pdb')
+
+	# super receptor chain backbones
+        super_alignment_rec = cmd.super('afold_rec and backbone', 'native_rec and backbone')
+        metrics_for_a_model += tuple([float("{0:.2f}".format(n)) for n in super_alignment_rec])
+
+        # calculate rmsd-s
+        seq_alignment_rec = cmd.align('afold_rec', 'native_rec')
+        metrics_for_a_model += tuple([float("{0:.2f}".format(n)) for n in seq_alignment_rec])
+
+	# calculate rmsd by backbone
+        seq_alignment_rec = cmd.align('afold_rec and backbone', 'native_rec and backbone')
+        metrics_for_a_model += tuple([float("{0:.2f}".format(n)) for n in seq_alignment_rec])
+
+        super_complex = cmd.super(model_name, 'native')
+        metrics_for_a_model += tuple([float("{0:.2f}".format(n)) for n in super_complex])
+
+        super_complex = cmd.super(f'{model_name} and backbone', 'native and backbone')
+        metrics_for_a_model += tuple([float("{0:.2f}".format(n)) for n in super_complex])
+
+        #cmd.color('brown', model_name)
+        # color receptor interface of model in yellow
+        #cmd.color('yellow', 'interface_rec_afold')
+
+	# color peptide of model in cyan
+        #cmd.color('cyan', 'afold_pep')
+        #cmd.show(representation='sticks', selection='afold_pep')
+
+        metrics.append(metrics_for_a_model)
+
+    #cmd.set_name('native', complex)
+    #cmd.save(f'{input_dir}/{complex}.pse', format='pse')
+
+    # create column names
+    colnames = ['model_name', 'pdb_id', 'rec_chain', 'pep_chain', 'rank', 'model_no']
+    colnames_for_aln = ['rms_after_ref', 'no_aln_atoms_after_ref', 'ref_cycles',
+                        'rms_before_ref', 'no_aln_atoms_before_ref', 'raw_score',
+                        'no_aln_residues']
+
+    for type in ['_super_pep', '_align_seq_pep', '_super_pep_bb', '_align_seq_pep_bb',
+                 '_super_rec', '_super_rec_bb', '_align_seq_rec', '_align_seq_rec_bb',
+                 '_complex', '_complex_bb']:
+
+        new_colnames = [s + type for s in colnames_for_aln]
+        colnames = colnames + new_colnames
+
+    # saving calculated metrics
+    out_csv_dir = os.path.dirname(input_dir.rstrip('/'))
+    metrics_df = pandas.DataFrame(metrics, columns = colnames)
+    metrics_df.to_csv(os.path.join(out_csv_dir, 'metric' + '.csv'))

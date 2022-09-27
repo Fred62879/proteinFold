@@ -1,0 +1,230 @@
+* spec
+** command
+- rename filename from lower to upper case
+for f in * ; do mv -- "$f" "$(tr [:lower:] [:upper:] <<< "${f:0:4}")"".pdb" ; done
+
+** imports
+import sys, re, gc, os, io, importlib, numpy as np, matplotlib.pyplot as plt
+from Bio import SeqIO;from Bio.Seq import Seq;from Bio.SeqRecord import SeqRecord;from os.path import join;from biopandas.pdb import PandasPdb
+
+os.chdir('/media/fred/Local Disk/Projects/bioinfo/code')
+
+pdb_fn_0='/media/fred/Local Disk/Projects/bioinfo/data/input/idr/pdbs/1YCQ.pdb'
+pdb_fn_1='/media/fred/Local Disk/Projects/bioinfo/data/input/idr/pdbs/2AZE.pdb'
+
+link_fn='/media/fred/Local Disk/Projects/bioinfo/data/output/idr_af_full/poly_g_6/1YCQ.fasta/ranked_0.pdb'
+link_fn='/media/fred/Local Disk/Projects/bioinfo/data/output/idr_af_full/poly_g_6/2AZE.fasta/ranked_0.pdb'
+pred_fn='/media/fred/Local Disk/Projects/bioinfo/data/output/idr_af_full/poly_g_6/2AZE.fasta/ranked_0_removed_linker.pdb'
+
+pred_fn_6f_0='/media/fred/Local Disk/Projects/bioinfo/data/output/idr_af_full/poly_g_6_fasta/1YCQ.fasta/ranked_0_removed_linker.pdb'
+
+pred_fn_20_0='/media/fred/Local Disk/Projects/bioinfo/data/output/idr_af_full/poly_g_20/1YCQ.fasta/ranked_0_removed_linker.pdb'
+pred_fn_20_1='/media/fred/Local Disk/Projects/bioinfo/data/output/idr_af_full/poly_g_20/2AZE.fasta/ranked_0_removed_linker.pdb'
+
+complex_fn='/media/fred/Local Disk/Projects/bioinfo/data/output/idr_af_full/poly_g_6/1YCQ.fasta/complex.pdb'
+
+sed -i -e 's/aria2c/wget/g' -e 's/--dir=/-P /g' -e 's/--preserve-permissions//g' scripts/*.sh
+
+scp -r ../../data/input/dibs/pdb_cho0.npy  fred862@beluga.computecanada.ca:~/scratch/fred862/data/bioinfo/input/seq_to_pred/dibs
+
+bsl-py==0.13.0
+biopython==1.79
+chex==0.0.7
+dm-haiku==0.0.4
+dm-tree==0.1.6
+immutabledict==2.0.0
+jax==0.2.14
+ml-collections==0.1.0
+numpy==1.19.5
+pandas==1.3.0
+pdbfixer==1.8.1
+protobuf==3.19.4
+scipy==1.7.0
+tensorflow-cpu==2.4.1
+
+** pymol
+In order to use pymol in python script, it is recommended to use the python interpreter shipped together with the pymol package [here](https://stackoverflow.com/questions/63958085/how-to-embed-the-pymol-module-into-python)
+
+Locate python interpreter (e.g. {install_dir}/pymol/bin/python3.7) and then create a symbolink file (named as e.g. *pymolthon*) for this python interpreter via `ln -s {install_dir}/pymol/bin/python3.7 {insall_dir}/pymol/bin/pymolthon`. Then add path `{install_dir}/pymol/bin` to $PATH variable in ~/.bashrc.
+
+Now we can call `pymolthon` directly from command line. Comes with this python interpreter are basic packages including pymol, Biopython, and numpy etc. To install new packages, use `pymolthon -m pip install {package-name}` or `pymolthon -m pip install -r requirements.txt`
+
+
+** conda
+conda create --prefix (or -p) {path_to_virtualenv}/{env_name}
+conda env list
+conda env remove --prefix ...
+
+conda create -n {env_name}
+conda env remove -n ...
+
+conda clean -a
+
+python3 -m venv /path/to/new/virtual/environmen
+OR
+sudo apt-get install python-pip
+pip install virtualenv
+virtualenv -p='/usr/bin/python3.8' /opt/virtualenv/test_env
+
+* Record
+** Metrics
+** predicted lddt
+alphafold's per-residue prediction of its lDDT-C_alpha score
+
+measures percent of correclty predicted interatomic distances not 
+how well the predicted the true structures can be superimposed
+
+it rewards locally correct structures and getting invidudual domains
+right
+
+pldddt behaves similarly as a measure of local confidence
+
+0 (least confiden) - 100 (most confident)
+used to identiy domains and possible disordered regions and 
+assessing confidence within a domain
+
+** Aug 1
+*** Sat
+indir = '../data/input/idr_84/source'
+outdir = '../data/input/idr_84/poly_g_6'
+groups = parse_to_groups(indir)
+poly_g_link(indir, outdir, groups, n_g)
+
+** Aug 15
+*** Fri
+model_name='native'
+chain_name='L'
+
+gt_fn='/media/fred/Local Disk/Projects/bioinfo/data/input/peptide/pdbs/1AWR.pdb'
+gt_fn='/media/fred/Local Disk/Projects/bioinfo/data/input/idr_84/pdbs/1YCQ.pdb'
+pred_fn='/media/fred/Local Disk/Projects/bioinfo/data/output/peptide_af_full/poly_g_6/1AWR.fasta/ranked_0_removed_linker.pdb'
+pred_fn='/media/fred/Local Disk/Projects/bioinfo/data/output/idr_84_pf_full/poly_g_6/1YCQ.fasta/ranked_0.pdb'
+pred_fn='/media/fred/Local Disk/Projects/bioinfo/data/output/idr_84_pf_full/poly_g_6/1YCQ.fasta/ranked_0_removed_linker.pdb'
+pred_fn='/media/fred/Local Disk/Projects/bioinfo/data/output/idr_84_pf_full/poly_g_6/1YCQ.fasta/ranked_0_removed_linker_aligned.pdb'
+cmd.load(pred_fn,'pred')
+cmd.load(gt_fn,'native')
+cmd.create('tmp',f'all and model {model_name} and chain {chain_name}')
+cmd.select('tmp',f'all and model {model_name} and chain {chain_name}') # coord only
+
+chain_start_ids=[0,113,-1]
+
+** Aug 22
+*** Wed
+def solve(fn):
+    ppdb = PandasPdb()
+    _ = ppdb.read_pdb(fn)
+    df = ppdb.df['ATOM']
+    return df
+
+def get_residue_id(pdb_fn):
+    ppdb = PandasPdb()
+    _ = ppdb.read_pdb(pdb_fn)
+    df = ppdb.df['ATOM']
+    n = df.shape[0]
+
+    prev_id = df.loc[0,'residue_number']
+    resid_ids = [prev_id]
+
+    for atom_id in range(1, n):
+       cur_id = df.loc[atom_id, 'residue_number']
+       if cur_id != prev_id:
+           resid_ids.append(cur_id)
+           prev_id = cur_id
+
+    return resid_ids
+*** Fri
+- process output csv
+
+import csv
+import pandas as pd
+
+target_cols = ['model_name','pdb_id','rec_chain','pep_chain','rank','model_no','rms_before_ref_align_seq_rec_bb 52','rms_before_ref_align_seq_rec','rms_before_ref_align_seq_pep_bb','rms_before_ref_align_seq_pep','rmsBB_if_af2','rmsBB_allIF','rmsALL_if_af2','rmsALL_allIF','rmsBB','rmsBB_if_pfpd','rmsALL_if_pfpd']
+
+def clean_and_reorder_csv(in_fn, out_fn, target_cols):
+    #in_fn = '../data/input/peptide/metric.csv'
+    #out_fn = '../data/input/peptide/metric_reord.csv'
+    #target_fn = '../code/peptide/Data/Source_Data/capri_supfig2.csv'
+
+    df = pd.read_csv(in_fn)
+    col_all = list(df.columns)
+    df_t = pd.read_csv(target_fn)
+    col_target = list(df_t.columns)
+    col_to_drop = list(set(col_all) - set(col_target))
+
+    for colname in col_to_drop:
+        df.drop(colname, inplace=True, axis=1)
+
+    df.to_csv(out_fn, sep=',')
+
+with open(in_fn,'rb') as source:
+    rdr= csv.reader( source )
+    with open(out_fn,'wb') as result:
+        wtr= csv.writer( result )
+        for r in rdr:
+            wtr.writerow( (r[0], r[1], r[3], r[4]) )
+
+with open('file.csv', 'r') as infile, open('reordered.csv', 'a') as outfile:
+    # output dict needs a list for new column ordering
+    fieldnames = ['A', 'C', 'D', 'E', 'B']
+    writer = csv.DictWriter(outfile, fieldnames=fieldnames)
+    # reorder the header first
+    writer.writeheader()
+    for row in csv.DictReader(infile):
+        # writes the reordered rows to the new file
+        writer.writerow(row)
+** Aug 29
+*** Tue
+cmd.show_as(representation='cartoon',selection='native or pred')
+cmd.multisave('/home/fred/Downloads/tmp.pdb','native or pred',format='pdb')
+** Sep 11
+*** Sun
+pdb_fn='/media/fred/Local Disk/Projects/bioinfo/data/input/idr/pdbs/1YCQ.pdb'
+in_fn='/media/fred/Local Disk/Projects/bioinfo/data/output/idr_af_full/poly_g_6_fasta/1YCQ.fasta/ranked_0_removed_linker.pdb'
+out_fn='/media/fred/Local Disk/Projects/bioinfo/data/output/idr_af_full/poly_g_6_fasta/1YCQ.fasta/ranked_0_removed_linker_aligned.pdb'
+seqs1=read_residue_from_pdb('../data/output/idr_af_full/poly_g_6_fasta/1YCQ.fasta/ranked_0_removed_linker.pdb')
+seqs2=read_residue_from_pdb('../data/input/idr/pdbs/1YCQ.pdb')
+ranges=find_prune_ranges_all_chains(seqs1, seqs2, chain_ids, prune_X=False)
+#ranges = np.array([[[0,8],[96,107]],[[107, 111],[122, 124]]])
+
+prune_seq_given_ranges('../data/output/idr_af_full/poly_g_6_fasta/1YCQ.fasta/ranked_0_removed_linker.pdb','../data/output/idr_af_full/poly_g_6_fasta/1YCQ.fasta/ranked_0_removed_linker_aligned.pdb',ids['1YCQ'],ranges)
+
+seqs1=read_residue_from_pdb('../data/output/idr_af_full/poly_g_6_fasta/2AZE.fasta/ranked_0_removed_linker.pdb')
+seqs2=read_residue_from_pdb('../data/input/idr/pdbs/2AZE.pdb')
+ranges=find_prune_ranges_all_chains(seqs1, seqs2, prune_X=False)
+    
+*** Tue
+def solve(fn):
+    ppdb = PandasPdb()
+    _ = ppdb.read_pdb(fn)
+    df = ppdb.df['ATOM']
+    return set(df['residue_number'])
+** Sep 18
+*** Sun
+def solve(pdb_id):
+    pdb_fn = f'/media/fred/Local Disk/Projects/bioinfo/data/input/idr/pdbs/{pdb_id}.pdb'
+    pred_fn = f'/media/fred/Local Disk/Projects/bioinfo/data/output/idr_af_full/poly_g_12/{pdb_id}.fasta/ranked_0_removed_linker.pdb'
+    arr1 = read_num_atoms_for_each_residue(pdb_fn, remove_H=True)
+    arr2 = read_num_atoms_for_each_residue(pred_fn, remove_H=True)
+
+    diff = []
+    for map1,map2 in zip(arr1,arr2):
+        cur_chain_diff = []
+        for k,v1 in map1.items():
+            v2 = map2[k]
+            if v1 != v2: cur_chain_diff.append([k,v1,v2])
+        diff.append(cur_chain_diff)
+    return diff
+*** Fri
+pdb0='/media/fred/Local Disk/Projects/bioinfo/data/input/idr/pdbs/1H8B.pdb'
+pred06='/media/fred/Local Disk/Projects/bioinfo/data/output/idr_af_full/poly_g_6/1H8B.fasta/ranked_0_removed_linker.pdb'
+pred012='/media/fred/Local Disk/Projects/bioinfo/data/output/idr_af_full/poly_g_12/1H8B.fasta/ranked_0_removed_linker.pdb'
+pred024='/media/fred/Local Disk/Projects/bioinfo/data/output/idr_af_full/poly_g_24/1H8B.fasta/ranked_0_removed_linker.pdb'
+pred048='/media/fred/Local Disk/Projects/bioinfo/data/output/idr_af_full/poly_g_48/1H8B.fasta/ranked_0_removed_linker.pdb'
+pred096='/media/fred/Local Disk/Projects/bioinfo/data/output/idr_af_full/poly_g_96/1H8B.fasta/ranked_0_removed_linker.pdb'
+
+pdb1='/media/fred/Local Disk/Projects/bioinfo/data/input/dibs/pdbs/5URN.pdb'
+pred16='/media/fred/Local Disk/Projects/bioinfo/data/output/dibs_af_full/poly_g_6/5URN.fasta/ranked_0_removed_linker.pdb'
+pred112='/media/fred/Local Disk/Projects/bioinfo/data/output/dibs_af_full/poly_g_12/5URN.fasta/ranked_0_removed_linker.pdb'
+pred124='/media/fred/Local Disk/Projects/bioinfo/data/output/dibs_af_full/poly_g_24/5URN.fasta/ranked_0_removed_linker.pdb'
+pred148='/media/fred/Local Disk/Projects/bioinfo/data/output/dibs_af_full/poly_g_48/5URN.fasta/ranked_0_removed_linker.pdb'
+pred196='/media/fred/Local Disk/Projects/bioinfo/data/output/dibs_af_full/poly_g_96/5URN.fasta/ranked_0_removed_linker.pdb'

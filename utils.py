@@ -1,22 +1,23 @@
 
-import os
 import csv
-import pandas
 import numpy as np
 
 import warnings
 warnings.filterwarnings("ignore")
 
-from pymol import cmd
 from Bio import SeqIO
+from pymol import cmd
 from Bio.Seq import Seq
 from os.path import join
-from functools import reduce
 from biopandas.pdb import PandasPdb
 from Bio.SeqRecord import SeqRecord
 
+def read_line_by_line(fn):
+    f = open(fn, 'r')
+    lines = f.readlines()
+    return [line.strip() for line in lines]
+
 def write_to_csv(data, out_fn):
-    #print(out_fn)
     with open(out_fn, 'w', newline='') as fp:
         writer = csv.writer(fp)
         for row in data:
@@ -31,7 +32,47 @@ def read_fasta(fn):
         break
     return monomer
 
+def save_fasta(seq, fn, id='0'):
+    seq = SeqRecord(Seq(seq),id=id)
+    SeqIO.write(seq, fn, 'fasta')
+
+def read_num_atoms_for_each_residue(pdb_fn, remove_H=True):
+    ppdb = PandasPdb()
+    _ = ppdb.read_pdb(pdb_fn)
+    df = ppdb.df['ATOM']
+
+    if remove_H:
+        valid_ids = df['element_symbol'] != 'H'
+        df = df[valid_ids]
+
+    num_atoms = []
+    chain_ids = read_chain_id_from_pdb(pdb_fn)
+    for chain_id in chain_ids:
+        cur_num_atoms = {}
+        cur_chain_atom_ids = df['chain_id'] == chain_id
+        dup_resid_ids = list(df.loc[cur_chain_atom_ids,'residue_number'])
+        lo, hi = dup_resid_ids[0], dup_resid_ids[-1]
+
+        for resid_id in range(lo, hi+1):
+            valid_atoms = df[ (df['chain_id']== chain_id) &
+                              (df['residue_number'] == resid_id) ]
+            n_atoms = len(valid_atoms)
+            cur_num_atoms[resid_id] = n_atoms
+        num_atoms.append(cur_num_atoms)
+    return num_atoms
+
 def read_residue_from_pdb(fn, print=False):
+    '''
+    seq = ''
+    d3to1 = {'CYS': 'C', 'ASP': 'D', 'SER': 'S', 'GLN': 'Q', 'LYS': 'K','ILE': 'I', 'PRO': 'P', 'THR': 'T', 'PHE': 'F', 'ASN': 'N','GLY': 'G', 'HIS': 'H','LEU': 'L', 'ARG': 'R', 'TRP': 'W','ALA': 'A', 'VAL':'V', 'GLU': 'E', 'TYR': 'Y', 'MET': 'M'}
+    for model in structure:
+        for chain in model:
+            for residue in chain:
+                res = residue.resname
+                if res in d3to1:
+                    seq += d3to1[res]
+        return seq
+    '''
     fastas = []
     with open(fn, 'r') as pdb_file:
         for record in SeqIO.parse(pdb_file, 'pdb-atom'):
@@ -42,122 +83,6 @@ def read_residue_from_pdb(fn, print=False):
                 _ = record.id
                 fastas.append(str(record.seq))
     return fastas
-
-def find_x_range(seq):
-    ''' find range of unknown aa subseq in seq
-        output range is lower incluside, upper exclusive
-    '''
-    start, in_X, n = -1, False, len(seq)
-    ranges = []
-    for i in range(n):
-        if seq[i] == 'X':
-            if not in_X:
-                in_X, start = True, i+1
-        elif in_X:
-            ranges.append([start,i+1])
-            start, in_X = -1, False
-
-    if start != -1:
-        ranges.append([start,n])
-    return np.array(ranges)
-
-def prune_seq_given_range(df, rnge, chain_id, to_remove_atom_ids):
-    ''' remove atoms falling within residue id lo (inclusive) and hi (exclusive)
-    '''
-    (resid_lo,resid_hi) = rnge
-    if resid_lo == resid_hi: return
-
-    atom_ids = df[ df['chain_id'] == chain_id &
-                   df['residue_number'] >= resid_lo &
-                   df['residue_number'] < resid_hi ].index
-    to_remove_atom_ids.extend(atom_ids)
-
-def prune_seq_given_ranges(in_fn, out_fn, chain_ids, ranges):
-    #if len(ranges) == 0: return
-    ppdb = PandasPdb()
-    _ = ppdb.read_pdb(in_fn)
-    df = ppdb.df['ATOM']
-    to_remove_atom_ids = []
-
-    for cur_ranges, chain_id in zip(ranges, chain_ids):
-        for rnge in cur_ranges:
-            prune_seq_given_range(df, rnge, chain_id, to_remove_atom_ids)
-        df.drop(to_remove_atom_ids, axis=0, inplace=True)
-
-    ppdb.df['ATOM'] = df
-    ppdb.to_pdb(out_fn)
-    #print(read_fasta_from_pdb(out_fn))
-
-def remove_x_from_pdb(dir, pdb_ids):
-    for pdb_id in pdb_ids:
-        in_fn = join(dir, pdb_id + '.pdb')
-        out_fn = join(dir, pdb_id + '.pdb')
-        seq = read_residue_from_pdb(in_fn)
-        ranges = find_x_range(seq)
-        prune_seq_given_ranges(in_fn, out_fn, ranges)
-
-
-def trim_x(seq):
-    ''' remove 'X' from sequence '''
-    return seq.replace('X','')
-
-def generate_fasta_from_pdb(in_dir, out_dir, pdb_ids, n_g, remove_x=False):
-    ''' generate source fasta based on gt pdb
-          and polyg link all chains
-        also record residue id (1-based continuous between chains
-          with polyg included) of start of each chain
-    '''
-    linker = 'G'*n_g
-    chain_start_resid_ids = {}
-
-    for id in pdb_ids:
-        in_fn = join(in_dir, id + '.pdb')
-        seqs = read_residue_from_pdb(in_fn)
-        if remove_x:
-            seqs = [trim_x(seq) for seq in seqs]
-        fasta = reduce(lambda acc, seq: acc + seq + linker, seqs, '')[:-n_g]
-
-        acc, start_ids = 1, []
-        for seq in seqs:
-            start_ids.append(acc)
-            acc += len(seq) + n_g
-        start_ids.append(len(fasta) + n_g + 1) # for ease of removal
-
-        out_fn = join(out_dir, id + '.fasta')
-        save_fasta(fasta, out_fn)
-        chain_start_resid_ids[id] = start_ids
-        print(start_ids)
-    return chain_start_resid_ids
-
-def save_fasta(seq, fn, id='0'):
-    seq = SeqRecord(Seq(seq),id=id)
-    SeqIO.write(seq, fn, 'fasta')
-
-def read_chain_bd_resid_id_from_pdb(pdb_fn, pdb_id, bd_resid_ids):
-    ''' return a list containing id of two boundary
-          residues in each chain
-    '''
-
-    ppdb = PandasPdb()
-    _ = ppdb.read_pdb(pdb_fn)
-    df = ppdb.df['ATOM']
-
-    cur_bd_resid_ids = []
-    chain_ids = read_chain_id_from_pdb(pdb_fn)
-    for chain_id in chain_ids:
-        cur_chain_atom_ids = df['chain_id'] == chain_id
-        dup_resid_ids = list(df.loc[cur_chain_atom_ids,'residue_number'])
-        cur_bd_resid_ids.append([ dup_resid_ids[0], dup_resid_ids[-1] ])
-
-    bd_resid_ids[pdb_id] = cur_bd_resid_ids
-    return bd_resid_ids
-
-def read_bd_resid_id_all(dir, pdb_ids):
-    res = {}
-    for id in pdb_ids:
-        fn = join(dir, id + '.pdb')
-        read_chain_bd_resid_id_from_pdb(fn, id, res)
-    return res
 
 def read_residue_id_from_pdb(pdb_fn):
     ''' return a list containing unique residue ids for the whole pdb '''
@@ -183,120 +108,163 @@ def read_chain_id_from_pdb(pdb_fn):
     df = ppdb.df['ATOM']
     return list(dict.fromkeys(df.loc[:,'chain_id']))
 
-def count_num_atoms_each_residue(pdb_fn):
+def read_chain_bd_resid_id_from_pdb(pdb_fn, pdb_id, bd_resid_ids):
+    ''' Find residue id of two boundary residues in each chain '''
+    print(f'Reading chain boundary residue id for {pdb_id}')
+
     ppdb = PandasPdb()
     _ = ppdb.read_pdb(pdb_fn)
     df = ppdb.df['ATOM']
-    n = df.shape[0]
+    dfh = ppdb.df['HETATM']
 
-    num_atoms = []
-    start_atom_id = 0
-    prev_id = df.loc[0,'residue_number']
-    resid_ids = [prev_id]
+    cur_bd_resid_ids = []
+    chain_ids = read_chain_id_from_pdb(pdb_fn)
+    for chain_id in chain_ids:
+        cur_chain_atom_ids = df['chain_id'] == chain_id
+        dup_resid_ids = list(df.loc[cur_chain_atom_ids,'residue_number'])
+        resid_lo, resid_hi = dup_resid_ids[0], dup_resid_ids[-1]
 
-    for atom_id in range(1, n):
-       cur_id = df.loc[atom_id, 'residue_number']
-       if cur_id != prev_id:
-           num_atoms.append(atom_id - start_atom_id)
-           start_atom_id = atom_id
-           prev_id = cur_id
+        '''
+        # to keep resid id for hetatm
+        cur_chain_htm_atom_ids =dfh['chain_id'] == chain_id
+        if len(cur_chain_htm_atom_ids) != 0:
+            dup_resid_ids = list(dfh.loc[cur_chain_htm_atom_ids,'residue_number'])
+            if len(dup_resid_ids) != 0:
+                htm_resid_lo, htm_resid_hi = dup_resid_ids[0], dup_resid_ids[-1]
+                print(resid_lo, resid_hi, htm_resid_lo, htm_resid_hi)
+                if resid_lo > htm_resid_lo:
+                    print('HETATOM lower')
+                if resid_hi < htm_resid_hi:
+                    print('HETATOM higher')
+                resid_lo = min(resid_lo, htm_resid_lo)
+                resid_hi = max(resid_hi, htm_resid_hi)
+        '''
 
-    num_atoms.append(n - start_atom_id)
-    return num_atoms
+        cur_bd_resid_ids.append([resid_lo, resid_hi])
 
-def get_chain_identifiers_all(pdb_ids, input_pdb_dir, gt_model_nm='native'):
-    chain_names = {}
-    for pdb_id in pdb_ids:
-        fn = join(input_pdb_dir, pdb_id + '.pdb')
-        #chain_name = split_chains_wo_env(fn, model=gt_model_nm)
-        chain_name = read_chain_id_from_pdb(fn)
-        chain_names[pdb_id] = chain_name
-    return chain_names
+    bd_resid_ids[pdb_id] = cur_bd_resid_ids
+    return bd_resid_ids
 
-def remove_linker(pred_fn, out_fn, linker_len, chain_names,
-                  chain_start_ids, gt_chain_bd_ids):
+def poly_g_link(indir, outdir, chain_start_ids, fasta_group, poly_g, n_g):
+    multimer = ''
+    cur_chain_start_ids = []
+    pdb_id = (fasta_group[0]).split('_')[0]
 
-    ''' remove linker from predicted pdb
-          also reorder residue id and rename chain identifier
-          as per gt pdb
+    for fn in fasta_group:
+        monomer = read_fasta(join(indir, fn + '.fasta'))
+        cur_chain_start_ids.append(len(multimer)+1) # 1-based
+        multimer += monomer + poly_g
 
-        Note: pred pdb residue id is continuous 1-indexed
-          and since all chains are polyg linked, resid id
-          is continuous between chains (polyg linker inclusive)
+    # add last start_id for convenience of polyg removal (for loop)
+    cur_chain_start_ids.append(len(multimer) + 1) # resid id 1-based
+    multimer = multimer[:-n_g]
 
-        chain_names:     identifier for all chain of current gt pdb
-        chain_start_ids: id of first residue in each chain (from pred pdb)
-        gt_chain_bd_ids: id of two boundary residue of each chain (from gt pdb)
+    ofn = join(outdir, pdb_id + '.fasta')
+    save_fasta(multimer, ofn, id=pdb_id)
+    chain_start_ids[pdb_id] = cur_chain_start_ids
+
+def find_subseq_range(seq1, seq2):
+    n, m = len(seq1), len(seq2)
+    for i in range(n):
+        if seq1[i:i+m] == seq2:
+            return np.array([[0,i],[i+m,n]])
+    assert(False)
+
+def find_prune_ranges_all_chains(seqs1, seqs2, chain_ids, prune_X=False):
+    ''' assume seq in seqs1 is longer than corresponding seq in seq2
+        returned range is residue id (1-based)
+    '''
+    acc_len = 0
+    rnge1, rnge2 = [], []
+    for seq1, seq2, chain_id in zip(seqs1, seqs2, chain_ids):
+        if prune_X:
+            cur_rnge1 = find_x_range(seq1)
+            if len(cur_rnge1) != 0:
+                rnge1.append(cur_rnge1 + acc_len)
+            cur_rnge2 = find_x_range(seq2)
+            if len(cur_rnge2) != 0:
+                rnge2.append(cur_rnge2 + acc_len)
+        else:
+            cur_rnge = find_subseq_range(seq1, seq2)
+            if len(cur_rnge) != 0:
+                rnge1.append(cur_rnge + acc_len)
+        acc_len += len(seq1)
+
+    return np.array(rnge1)+1, np.array(rnge2)+1
+
+def prune_renumber_seq_given_range(df, rnge, chain_id, to_remove_atom_ids, renumber_atom_ids, renumber_offsets, prev_hi, acc_offset):
+    ''' Remove atoms falling within residue id lo (inclusive) and hi
+          (exclusive) and renumber to make sure after pruning, residue
+          id goes from 1-n consecutively
     '''
 
-    if os.path.exists(out_fn):
-        return
+    (resid_lo,resid_hi) = rnge
+    atom_ids = df[ (df['chain_id'] == chain_id) &
+                   (df['residue_number'] >= resid_lo) &
+                   (df['residue_number'] < resid_hi) ].index
+    to_remove_atom_ids.extend(atom_ids)
 
-    residues = read_residue_from_pdb(pred_fn)[0]
-    for i in range(1, len(chain_start_ids)-1):
-        id = chain_start_ids[i] - 1 # 1-based to 0-based
-        print(residues[id-linker_len:id])
-        assert(residues[id-linker_len : id] == 'GGGGGG')
+    if prev_hi != -1:
+        renumber_range = [prev_hi, resid_lo]
+        renumber_offsets.append(acc_offset)
 
+        # update residue number (1-based)
+        cur_atom_ids = df[ (df['chain_id'] == chain_id) &
+                           (df['residue_number'] >= prev_hi) &
+                           (df['residue_number'] < resid_lo) ].index
+        renumber_atom_ids.append(cur_atom_ids)
+
+    acc_offset += (resid_hi - resid_lo)
+    return resid_hi, acc_offset
+
+def renumber_seq_per_gt(df, chain_ids, gt_chain_bd_ids, renumber_atom_ids, renumber_offsets):
+    for chain_id, gt_chain_bd_id in zip(chain_ids, gt_chain_bd_ids):
+        ids = df.loc[ (df['chain_id'] == chain_id) ].index
+        resid_lo = df.loc[ids[0],'residue_number']
+        offset = resid_lo - gt_chain_bd_id[0]
+        renumber_atom_ids.append(ids)
+        renumber_offsets.append(offset)
+
+def prune_renumber_seq_given_ranges(in_fn, out_fn, chain_ids, ranges, gt_chain_bd_ids):
+    ''' Prune extra residues from predicted pdb so that it match with gt
+        Also renumber residue id to be the same as in gt
+        Only used if aa seq comes from fasta file
+    '''
     ppdb = PandasPdb()
-    _ = ppdb.read_pdb(pred_fn)
+    _ = ppdb.read_pdb(in_fn)
     df = ppdb.df['ATOM']
 
-    n = len(chain_start_ids)
-    linker_atom_ids = []
-    atom_los, atom_his, offsets = [], [], []
+    prev_hi, acc_offset = -1, 0
+    to_remove_atom_ids = []
+    renumber_atom_ids, renumber_offsets = [], []
 
-    for i in range(n-1): # for each chain
-        resid_lo = chain_start_ids[i]
-        # resid_hi is residue id of first 'g' in pred
-        resid_hi = chain_start_ids[i+1] - linker_len
+    # gather atom ids for extra residues &
+    # atom ids for renumbering with corresponding offset
+    for i, (cur_ranges, chain_id) in enumerate(zip(ranges, chain_ids)):
+        for rnge in cur_ranges:
+            if rnge[0] == rnge[1]:
+                continue
+            prev_hi, acc_offset = prune_renumber_seq_given_range\
+                (df, rnge, chain_id, to_remove_atom_ids, renumber_atom_ids,
+                 renumber_offsets, prev_hi, acc_offset)
 
-        # make sure gt and pred chain has same length
-        gt_resid_lo, gt_resid_hi = gt_chain_bd_ids[i]
-        print(resid_lo, resid_hi, gt_resid_lo, gt_resid_hi)
-        assert(gt_resid_hi - gt_resid_lo + 1 == resid_hi - resid_lo)
+    # remove extra residues
+    df.drop(to_remove_atom_ids, axis=0, inplace=True)
 
-        # locate all atoms in pred pdb for current chain
-        atom_ids = df[ (df['residue_number'] >= resid_lo) &
-                       (df['residue_number'] < resid_hi) ].index
-        atom_lo, atom_hi = atom_ids[0], atom_ids[-1]
+    # renumber such that residue id is contiguous (1,2,...n)
+    for ids, renumber_offset in zip(renumber_atom_ids, renumber_offsets):
+        df.loc[ids, 'residue_number'] -= renumber_offset
 
-        ''' reorder residue id and rename chain
-            df.loc upper bound is inclusive
-            atom_hi is id of last atom of current chain
-        '''
-        offset = resid_lo - gt_resid_lo
-        atom_los.append(atom_lo)
-        atom_his.append(atom_hi)
-        offsets.append(offset)
-        df.loc[atom_lo:atom_hi ,'chain_id'] = chain_names[i]
+    # renumber such that residue id match gt
+    renumber_atom_ids, renumber_offsets = [], []
+    renumber_seq_per_gt(df, chain_ids, gt_chain_bd_ids, renumber_atom_ids, renumber_offsets)
+    for ids, renumber_offset in zip(renumber_atom_ids, renumber_offsets):
+        df.loc[ids, 'residue_number'] -= renumber_offset
 
-        # mark polyg linker for removal
-        if i != n - 2:
-            linker_atom_lo = atom_hi+1
-            linker_resid_hi = chain_start_ids[i+1]
-            linker_atom_hi = df[ (df['residue_number'] < linker_resid_hi) ].index[-1]
-            linker_atom_ids += list(np.arange(linker_atom_lo, linker_atom_hi+1))
-
-    # renumber chain residue id
-    for atom_lo, atom_hi, offset in zip(atom_los, atom_his, offsets):
-        df.loc[atom_lo:atom_hi ,'residue_number'] -= offset
-        print(df.loc[atom_lo,'residue_number'],df.loc[atom_hi,'residue_number'])
-
-    # drop linker residues
-    df.drop(linker_atom_ids, axis=0, inplace=True)
     ppdb.df['ATOM'] = df
     ppdb.to_pdb(out_fn)
 
-def calculate_rmsd(gt_pdb_fn, pred_pdb_fn, complex_fn, chain_names, backbone=False, remove_hydrogen=False):
-    ''' calculate rmsd between gt and pred
-
-        superimpose pred onto gt (with receptor only)
-          assume chain_names[-1] is the target chain
-          (e.g. peptide or idr)
-    '''
-
-    rmsds = []
+def load_and_select(dist, gt_pdb_fn, pred_pdb_fn, chain_names, backbone=False, remove_hydrogen=False):
     cmd.delete('all')
     cmd.load(gt_pdb_fn, 'native')
     cmd.load(pred_pdb_fn, 'pred')
@@ -305,169 +273,22 @@ def calculate_rmsd(gt_pdb_fn, pred_pdb_fn, complex_fn, chain_names, backbone=Fal
     if remove_hydrogen:
         cmd.remove('hydrogens')
 
-    target_name = chain_names[-1]
-    target_chain_selector = f'chain {target_name}'
-    receptor_chain_selector = f'not chain {target_name}'
+    idr_chain_id = chain_names[-1]
+    target_chain_selector = f'chain {idr_chain_id}'
+    receptor_chain_selector = f'not chain {idr_chain_id}'
 
     if backbone:
         target_chain_selector += ' and backbone'
         receptor_chain_selector += ' and backbone'
 
-    cmd.select('pred_R', f'pred and {receptor_chain_selector}')
-    cmd.select('pred_T', f'pred and {target_chain_selector}')
-    cmd.select('native_R', f'native and {receptor_chain_selector}')
-    cmd.select('native_T', f'native and {target_chain_selector}')
+    for obj in ['native','pred']:
+        cmd.select(f'{obj}_R', f'{obj} and {receptor_chain_selector}')
+        cmd.select(f'{obj}_T', f'{obj} and {target_chain_selector}')
+        cmd.select(f'{obj}_R_interface_init', f'byres {obj}_R within {dist} of {obj}_T')
+        cmd.select(f'interface_{obj}', f'{obj}_R_interface_init + byres {obj}_T within {dist} of {obj}_R_interface_init')
 
-    # calculate rmsd without superimposing the receptor chains (sanity check)
-    # two proteins in this case are far apart from each other and thus this
-    # rmsd should be way larger than those above
-    metrics = cmd.rms_cur('native_T','pred_T')
-    #print(metrics)
-    rmsds.append(metrics)
-
-    # superimpose receptor chains and calculate rmsd for target chains
-    super = cmd.super('native_R','pred_R')
-
-    # save two objects after superimposing receptor chain
-    cmd.color('blue','native')
-    cmd.color('yellow','pred')
-    cmd.multisave(complex_fn, 'all', format='pdb')
-
-    metrics = cmd.rms_cur('native_T','pred_T')
-    #print(metrics)
-    rmsds.append(metrics)
-    metrics = cmd.rms_cur('native_R','pred_R')
-    #print(metrics)
-    rmsds.append(metrics)
-
-    # superimpose target chains
-    # if target chains are not spatially matched well
-    # this rmsd would be extremely large
-    super = cmd.super('native_T','pred_T')
-    metrics = cmd.rms_cur('native_R','pred_R')
-    #print(metrics)
-    rmsds.append(metrics)
-
-    # rmsd after aligning target chain
-    metrics = cmd.align('native_T','pred_T')
-    print(metrics)
-    rmsds.append(metrics[0])
-
-    # rmsd after aligning receptor chain
-    metrics = cmd.align('native_R','pred_R')
-    print(metrics)
-    rmsds.append(metrics[0])
-
-    rmsds = [round(rmsd,2) for rmsd in rmsds]
-    return rmsds
-
-def reorder_csv(in_file, out_file, colnames):
-    with open(in_file, 'r') as infile, open(out_file, 'a') as outfile:
-        # output dict needs a list for new column ordering
-        writer = csv.DictWriter(outfile, fieldnames=colnames)
-        # reorder the header first
-        writer.writeheader()
-        for row in csv.DictReader(infile):
-            # writes the reordered rows to the new file
-            writer.writerow(row)
-
-def peptide_metric(pdb_ids, input_dir, output_dir, pred_fn, chain_names):
-    metrics = []
-
-    for id in pdb_ids[0:1]:
-    #for model_file in glob.glob(os.path.join(input_dir, 'linker_removed*.pdb')):
-	#model_name = os.path.basename(model_file).replace('.pdb', '')
-	#rank = int(str(rank_re.search(model_name).group(0)).replace('rank_', ''))
-	#model_no = int(str(model_re.search(model_name).group(0)).replace('model_', ''))
-        model_name = 'afold'
-        rank = 0
-        model_no = 'dum'
-        rec_chain, pep_chain = chain_names[id]
-        metrics_for_a_model = [model_name, id, rec_chain, pep_chain, rank, model_no]
-
-        model_file = join(output_dir, id + '.fasta', pred_fn)
-        native_file = join(input_dir, id + '.pdb')
-
-        cmd.load(native_file, 'native')
-        cmd.load(model_file, model_name)
-
-        print(model_name, rec_chain, pep_chain, model_file)
-        cmd.select("native_rec", f'native and chain {rec_chain}')
-        cmd.select("native_pep", f'native and chain {pep_chain}')
-
-        cmd.select("afold_rec", f'{model_name} and chain {rec_chain}')
-        cmd.select("afold_pep", f'{model_name} and chain {pep_chain}')
-
-        # align peptide chains
-        super_alignment_pep = cmd.super('afold_pep', 'native_pep')
-        metrics_for_a_model += tuple([float("{0:.2f}".format(n)) for n in super_alignment_pep])
-
-        seq_alignment_pep = cmd.align('afold_pep', 'native_pep')
-        metrics_for_a_model += tuple([float("{0:.2f}".format(n)) for n in seq_alignment_pep])
-
-        # align peptide chains backbone
-        super_alignment_pep = cmd.super('afold_pep and backbone', 'native_pep and backbone')
-        metrics_for_a_model += tuple([float("{0:.2f}".format(n)) for n in super_alignment_pep])
-
-        seq_alignment_pep = cmd.align('afold_pep and backbone', 'native_pep and backbone')
-        metrics_for_a_model += tuple([float("{0:.2f}".format(n)) for n in seq_alignment_pep])
-
-        # super receptor chains
-        super_alignment_rec = cmd.super('afold_rec', 'native_rec')
-        metrics_for_a_model += tuple([float("{0:.2f}".format(n)) for n in super_alignment_rec])
-
-        # save the superimposed structure
-        cmd.select('model_to_save', model_name)
-        super_filename=f'{model_name}_superimposed.pdb'
-        print(super_filename)
-        save_to_file = os.path.join(input_dir, super_filename)
-        cmd.save(save_to_file, model_name, format='pdb')
-
-	# super receptor chain backbones
-        super_alignment_rec = cmd.super('afold_rec and backbone', 'native_rec and backbone')
-        metrics_for_a_model += tuple([float("{0:.2f}".format(n)) for n in super_alignment_rec])
-
-        # calculate rmsd-s
-        seq_alignment_rec = cmd.align('afold_rec', 'native_rec')
-        metrics_for_a_model += tuple([float("{0:.2f}".format(n)) for n in seq_alignment_rec])
-
-	# calculate rmsd by backbone
-        seq_alignment_rec = cmd.align('afold_rec and backbone', 'native_rec and backbone')
-        metrics_for_a_model += tuple([float("{0:.2f}".format(n)) for n in seq_alignment_rec])
-
-        super_complex = cmd.super(model_name, 'native')
-        metrics_for_a_model += tuple([float("{0:.2f}".format(n)) for n in super_complex])
-
-        super_complex = cmd.super(f'{model_name} and backbone', 'native and backbone')
-        metrics_for_a_model += tuple([float("{0:.2f}".format(n)) for n in super_complex])
-
-        #cmd.color('brown', model_name)
-        # color receptor interface of model in yellow
-        #cmd.color('yellow', 'interface_rec_afold')
-
-	# color peptide of model in cyan
-        #cmd.color('cyan', 'afold_pep')
-        #cmd.show(representation='sticks', selection='afold_pep')
-
-        metrics.append(metrics_for_a_model)
-
-    #cmd.set_name('native', complex)
-    #cmd.save(f'{input_dir}/{complex}.pse', format='pse')
-
-    # create column names
-    colnames = ['model_name', 'pdb_id', 'rec_chain', 'pep_chain', 'rank', 'model_no']
-    colnames_for_aln = ['rms_after_ref', 'no_aln_atoms_after_ref', 'ref_cycles',
-                        'rms_before_ref', 'no_aln_atoms_before_ref', 'raw_score',
-                        'no_aln_residues']
-
-    for type in ['_super_pep', '_align_seq_pep', '_super_pep_bb', '_align_seq_pep_bb',
-                 '_super_rec', '_super_rec_bb', '_align_seq_rec', '_align_seq_rec_bb',
-                 '_complex', '_complex_bb']:
-
-        new_colnames = [s + type for s in colnames_for_aln]
-        colnames = colnames + new_colnames
-
-    # saving calculated metrics
-    out_csv_dir = os.path.dirname(input_dir.rstrip('/'))
-    metrics_df = pandas.DataFrame(metrics, columns = colnames)
-    metrics_df.to_csv(os.path.join(out_csv_dir, 'metric' + '.csv'))
+        # color receptor interface of {obj} in yellow
+        cmd.select(f'{obj}_interface_R', f'interface_{obj} and {receptor_chain_selector}')
+        cmd.select(f'{obj}_interface_T', f'interface_{obj} and {target_chain_selector}')
+        cmd.color('yellow', f'{obj}_interface_R')
+        cmd.color('blue',f'{obj}_interface_T')
