@@ -29,7 +29,7 @@ class pipeline:
             self._init_output_processing(args)
 
     def _init_input_processing(self, args):
-        self.pdb_cho_fn = args.pdb_cho_fn
+        self.pdb_ids_fn = args.pdb_ids_fn
         self.linked_fasta_dir = args.linked_fasta_dir
 
     def _init_input_processing_from_fasta(self, args):
@@ -190,7 +190,7 @@ class pipeline:
             utils.save_fasta(fasta, out_fn)
             chain_start_resid_ids[id] = start_ids
 
-        np.save(self.pdb_cho_fn, np.array(valid_ids))
+        np.save(self.pdb_ids_fn, np.array(valid_ids))
         return chain_start_resid_ids
 
     def remove_linker(self, pdb_id, pred_fn, pred_removed_linker_fn):

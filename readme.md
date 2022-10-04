@@ -20,4 +20,4 @@ After downloading alphafold predictions (ranked_0.pdb) from the remote server (s
 ### Running
 `configs/test.ini` contains all necessary configurations to run the pipeline. For example, to run input processing, simply do `operations=[process_input]`, and `operations=[process_output]` for output processing.
 
-To run input processing, call `python main.py --config configs/test.ini`.
+To run input processing, call `python main.py --config configs/sample.ini`.

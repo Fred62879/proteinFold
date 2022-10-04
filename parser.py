@@ -12,6 +12,7 @@ def add_cmd_line_args(parser):
     parser.add_argument('--pdb_cho', type=str, default='0')
     parser.add_argument('--operations', type=str, nargs='+')
 
+    parser.add_argument('--data_dir', type=str, required=True)
     parser.add_argument('--trail_id', type=str, default='trail_dum')
     parser.add_argument('--model_name', type=str, default='model_dum')
     parser.add_argument('--experiment_id', type=str, default='exp_dum')
@@ -38,7 +39,6 @@ def add_cmd_line_args(parser):
 
 def add_hardcoded_args(config):
     config['gt_model_nm'] = 'native'
-    config['data_dir'] = '/media/fred/Local Disk/Projects/bioinfo/data'
 
     config['pdb_str'] = 'pdbs'
     config['input_str'] = 'input'
