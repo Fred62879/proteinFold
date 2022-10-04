@@ -170,6 +170,62 @@ def find_subseq_range(seq1, seq2):
             return np.array([[0,i],[i+m,n]])
     assert(False)
 
+def find_residue_diff_in_atom_counts(fn1, fn2):
+    arr1 = read_num_atoms_for_each_residue(fn1, remove_H=True)
+    arr2 = read_num_atoms_for_each_residue(fn2, remove_H=True)
+    diff = []
+    for map1,map2 in zip(arr1,arr2):
+        cur_chain_diff = []
+        for k,v1 in map1.items():
+            v2 = map2[k]
+            if v1 != v2: cur_chain_diff.append([k,v1,v2])
+        diff.append(cur_chain_diff)
+    return diff
+
+def prune_extra_atoms(pdb_fn, out_fn, ranges):
+    ''' remove extra atoms from pdb files and renumber atom ids '''
+    ppdb = PandasPdb()
+    _ = ppdb.read_pdb(pdb_fn)
+    df = ppdb.df['ATOM']
+
+    # offset between atom id and dataframe id
+    # increment by 1 after each chain
+    atom_offset = 0
+
+    id_lo, acc_len = 0, 0
+    to_remove_atom_ids = []
+    acc_lens, decrmt_rnge = [], []
+
+    # gather ranges of atoms to delete and to decrement with id
+    for i, cur_chain_ranges in enumerate(ranges):
+        for rnge in cur_chain_ranges:
+            (lo, hi) = rnge
+            ids = list(np.arange(lo-atom_offset, hi+1-atom_offset))
+            to_remove_atom_ids.extend(ids)
+
+            # update range of atoms that are kept
+            decrmt_rnge.append([id_lo, lo - 1]) #-acc_len
+            id_lo = lo #-acc_len
+
+            # update acc_len
+            acc_lens.append(acc_len)
+            acc_len += hi - lo + 1
+        atom_offset += 1
+    acc_lens.append(acc_len)
+    decrmt_rnge.append([id_lo, len(df)-1])
+
+    # drop atoms
+    df.drop(to_remove_atom_ids, axis=0, inplace=True)
+
+    # decrement atoms
+    for i, (length, rnge) in enumerate(zip(acc_lens, decrmt_rnge)):
+        lo, hi = rnge
+        #print(lo, hi, length)
+        df.loc[lo:hi,'atom_number'] -= length # upper inclusive
+
+    ppdb.df['ATOM'] = df
+    ppdb.to_pdb(out_fn)
+
 def find_prune_ranges_all_chains(seqs1, seqs2, chain_ids, prune_X=False):
     ''' assume seq in seqs1 is longer than corresponding seq in seq2
         returned range is residue id (1-based)

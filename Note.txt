@@ -3,6 +3,25 @@
 - rename filename from lower to upper case
 for f in * ; do mv -- "$f" "$(tr [:lower:] [:upper:] <<< "${f:0:4}")"".pdb" ; done
 
+** timing
+Select 10 DIBS and 10 IDR proteins (linker length 6,12,24,48,96)
+Run on sequence extracted from pdb first (use this as reference)
+Idr (10)
+1ozs,1tce,1i8h,1h8b,1h3h,1sb0,2laj,2m3m,2czy,2rsn,4x34
+Exclude: 2xze,3ql9,4z0r,4x34(too long to run)
+6 done (gpu: 5 per 3 hrs)
+12 done
+24 done (cpu: 6hrs per 5, gpu: 3hrs per 5)
+48 done (cpu: 6hrs per 5, gpu: 4hrs per 5)
+96 done (gpu: 3-6hrs per 5)
+Dibs (5)
+3ixs,3fdt,3g2v,5urn,4gng,5heb,3mxc,3wgx,3g2u (9)
+6 done (gpu: 3hrs per 5)
+12 done
+24 done (cpu: 8hrs per 5)
+48 done (cpu: 8hrs per 5)
+96 done (cpu -14hrs per 5)
+
 ** imports
 import sys, re, gc, os, io, importlib, numpy as np, matplotlib.pyplot as plt
 from Bio import SeqIO;from Bio.Seq import Seq;from Bio.SeqRecord import SeqRecord;from os.path import join;from biopandas.pdb import PandasPdb
@@ -48,7 +67,6 @@ In order to use pymol in python script, it is recommended to use the python inte
 Locate python interpreter (e.g. {install_dir}/pymol/bin/python3.7) and then create a symbolink file (named as e.g. *pymolthon*) for this python interpreter via `ln -s {install_dir}/pymol/bin/python3.7 {insall_dir}/pymol/bin/pymolthon`. Then add path `{install_dir}/pymol/bin` to $PATH variable in ~/.bashrc.
 
 Now we can call `pymolthon` directly from command line. Comes with this python interpreter are basic packages including pymol, Biopython, and numpy etc. To install new packages, use `pymolthon -m pip install {package-name}` or `pymolthon -m pip install -r requirements.txt`
-
 
 ** conda
 conda create --prefix (or -p) {path_to_virtualenv}/{env_name}
@@ -199,21 +217,6 @@ def solve(fn):
     df = ppdb.df['ATOM']
     return set(df['residue_number'])
 ** Sep 18
-*** Sun
-def solve(pdb_id):
-    pdb_fn = f'/media/fred/Local Disk/Projects/bioinfo/data/input/idr/pdbs/{pdb_id}.pdb'
-    pred_fn = f'/media/fred/Local Disk/Projects/bioinfo/data/output/idr_af_full/poly_g_12/{pdb_id}.fasta/ranked_0_removed_linker.pdb'
-    arr1 = read_num_atoms_for_each_residue(pdb_fn, remove_H=True)
-    arr2 = read_num_atoms_for_each_residue(pred_fn, remove_H=True)
-
-    diff = []
-    for map1,map2 in zip(arr1,arr2):
-        cur_chain_diff = []
-        for k,v1 in map1.items():
-            v2 = map2[k]
-            if v1 != v2: cur_chain_diff.append([k,v1,v2])
-        diff.append(cur_chain_diff)
-    return diff
 *** Fri
 pdb0='/media/fred/Local Disk/Projects/bioinfo/data/input/idr/pdbs/1H8B.pdb'
 pred06='/media/fred/Local Disk/Projects/bioinfo/data/output/idr_af_full/poly_g_6/1H8B.fasta/ranked_0_removed_linker.pdb'
@@ -228,3 +231,32 @@ pred112='/media/fred/Local Disk/Projects/bioinfo/data/output/dibs_af_full/poly_g
 pred124='/media/fred/Local Disk/Projects/bioinfo/data/output/dibs_af_full/poly_g_24/5URN.fasta/ranked_0_removed_linker.pdb'
 pred148='/media/fred/Local Disk/Projects/bioinfo/data/output/dibs_af_full/poly_g_48/5URN.fasta/ranked_0_removed_linker.pdb'
 pred196='/media/fred/Local Disk/Projects/bioinfo/data/output/dibs_af_full/poly_g_96/5URN.fasta/ranked_0_removed_linker.pdb'
+
+** Sep 25
+*** Wed
+diff=find_residue_diff_in_atom_counts(in_dir, out_dir, '2XZE', pred_fn)
+ranges=[[877, 884], [921,931],[1530,1537],[1621,1628],[1638,1643],[2117,2127],[2249,2257],[2545, 2546]]
+
+pdb_fn='../data/input/idr/pdb_to_prune/2XZE.pdb'
+out_fn = '../data/input/idr/pdbs/2XZE.pdb'
+pred_fn = '../data/output/idr_af_full/poly_g_12/3QL9.fasta/ranked_0_removed_linker.pdb'
+diff=find_residue_diff_in_atom_counts(pdb_fn, pred_fn)
+# manual generation of range
+ranges=[[[876, 884], [921, 931]], [[1530, 1537], [1621, 1628], [1638, 1643], [2117, 2127], [2249, 2257]], [[2545, 2545]]]
+prune_extra_atoms(pdb_fn, out_fn, ranges)
+** Oct 2
+*** Sun
+cpu:
+a='1XR0,1WLP,1QFN,1S5R,1SSE,1UEL,1C8O,1JGN,1D5S,1CF4,1JMT,1J2J,1OZS,1Q5W,1L4W,1ORY,1PD7,1PNB,7VSI,7TGG,7VLJ,7S5J,7PKU,7QV8,2FHO,2JU0,2GGV,2GP9,2JMX,2DT7,2KJE,2LEH,2OFQ,2KDU,2K42,2KC8,2KHW,2KJ4,2ZQP,3BZV,2RNR,2PQ4,2ROZ,3CAA,3H8K,3HK3,4LX3,4MMT,3MN7,3HM6,3M1F,3M51,6SBA,7B2B,6WUD,6XFL,6LPH,7CQP,7FB5,7DCP,7JQD,7OYS,7LWB'
+b=a.split(',')
+
+2FOT,2PHG,5GTU,5L0T,7E2H,7NDX,7NJ1,7P9U,7OVC,7LJ0
+error: 7OS1
+
+gpu:
+a='1PNB,1SSE,1S5R,1Q5W,1QFN,1J2J,1D5S,1C8O,1JGN,1CF4,1OZS,1PD7,1L4W,1ORY,1JMT,1UEL,1WLP,1S5R,1QFN,1XR0'
+
+*** Mon
+a='1XTG,7JYZ,7P9U,7NDX,2PHG,7E2H,7OYS,7P9U,2PHG,2BBN,7OVC,7EV8,7OYS,1XTG,7LJ0'
+b=a.split(',')
+exclude '2AUH','7NJ1'
