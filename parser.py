@@ -12,6 +12,7 @@ def add_cmd_line_args(parser):
     parser.add_argument('--pdb_cho', type=str, default='0')
     parser.add_argument('--operations', type=str, nargs='+')
 
+    parser.add_argument('--code_dir', type=str, required=True)
     parser.add_argument('--data_dir', type=str, required=True)
     parser.add_argument('--trail_id', type=str, default='trail_dum')
     parser.add_argument('--model_name', type=str, default='model_dum')
@@ -22,6 +23,7 @@ def add_cmd_line_args(parser):
 
     parser.add_argument('--pred_fn', type=str, default='ranked_0')
 
+    parser.add_argument('--dockq', action='store_true', default=False)
     parser.add_argument('--verbose', action='store_true', default=False)
     parser.add_argument('--remove_x', action='store_true', default=False)
     parser.add_argument('--backbone', action='store_true', default=False)
@@ -55,20 +57,22 @@ def add_hardcoded_args(config):
     config['aligned_fn_str'] = 'ranked_0_removed_linker_aligned.pdb'
 
     config['pdb_ids_fn_str'] = 'pdb_ids' + config['pdb_cho']
+    config['pdb_gpu_done_fn_str'] = 'pdb_gpu_done' + config['pdb_cho']
     config['pdb_exclude_fn_str'] = 'pdb_exclude' + config['pdb_cho']
     config['chain_names_fn_str'] = 'chain_names'+config['pdb_cho']+'.pkl'
     config['chain_start_resid_ids_fn_str'] = 'chain_start_ids'+config['pdb_cho']+'.pkl'
     config['gt_chain_bd_resid_ids_fn_str'] = 'gt_chain_bd_ids'+config['pdb_cho']+'.pkl'
 
     backbone_str = '' if not config['backbone'] else '_backbone'
-    config['rmsd_fn_str'] = f'rmsd{backbone_str}.csv'
-    #config['rmsd_names'] = ['pdb_id','rmsd_init','rmsd_r_super_idr','rmsd_idr_super_r','rmsd_interface_idr_super_r','rmsd_idr_align','rmsd_r_align']
-    config['rmsd_names'] = ['pdb_id','idr (super_r)','interface_idr (super_r)']
-
+    config['rmsd_fn_str'] = f'rmsd{backbone_str}'
+    if config['dockq']:
+        config['rmsd_names'] = ['pdb_id','irms','Lrms','dockQ']
+        config['rmsd_fn_str'] += '_dockq'
+    else:
+        config['rmsd_names'] = ['pdb_id','ligand (super r)','interface ligand (super r)']
+    config['rmsd_fn_str'] += '.csv'
 
 def add_path(config):
-
-    # add dir
     input_dir = join(config['data_dir'], config['input_str'], config['experiment_id'])
 
     config['input_pdb_dir'] = join(input_dir, config['pdb_str'])
@@ -84,6 +88,7 @@ def add_path(config):
 
     # add filenames
     config['pdb_ids_fn'] = join(input_dir, config['pdb_ids_fn_str']+'.npy')
+    config['pdb_gpu_done_fn'] = join(input_dir, config['pdb_gpu_done_fn_str']+'.npy')
     config['pdb_exclude_fn'] = join(input_dir, config['pdb_exclude_fn_str']+'.npy')
     config['rmsd_fn'] = join(config['output_dir'], config['rmsd_fn_str'])
     config['chain_names_fn'] = join(config['linked_fasta_dir'], config['chain_names_fn_str'])
@@ -92,22 +97,22 @@ def add_path(config):
 
 
 def select_pdb_ids(config):
-    #config['pdb_ids'] = ['1I8H']
+    #config['pdb_ids'] = ['2XZE']
     #config['pdb_ids'] = ['1YCQ','2AZE'] #,'2RSN']
     #config['pdb_ids'] = ['1AWR','1EG4','1ELW','1ER8','1JD5']
     #config['pdb_ids'] = ['1YCQ','2AZE','2M3M','2QTV','2RSN','3DF0','4U7T']
 
-    fn = config['pdb_ids_fn']
+    #fn = config['pdb_ids_fn']
+    fn = config['pdb_gpu_done_fn']
     excld_fn = config['pdb_exclude_fn']
 
     if exists(fn):
         pdb_ids = np.load(fn)
         if exists(excld_fn):
-            #exclude_ids = np.load(excld_fn)
-            #print(exclude_ids)
+            exclude_ids = np.load(excld_fn)
             #exclude_ids = np.append(exclude_ids,['2M3M','4X34'])
-            #pdb_ids = np.array(list( set(pdb_ids) - set(exclude_ids) ))
-            pdb_ids = np.sort(pdb_ids)
+            pdb_ids = np.array(list( set(pdb_ids) - set(exclude_ids) ))
+        pdb_ids = np.sort(pdb_ids)
     else:
         #if config['from_fasta']:
         #    all_pdb_ids = np.array(os.listdir(config['source_fasta_dir']))
@@ -119,7 +124,7 @@ def select_pdb_ids(config):
         pdb_ids = np.sort(pdb_ids)
         np.save(fn, pdb_ids)
 
-    config['pdb_ids'] = pdb_ids
+    config['pdb_ids'] = pdb_ids[:1]
     print(f'selected proteins {pdb_ids}')
 
 

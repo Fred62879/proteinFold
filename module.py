@@ -6,9 +6,9 @@ import numpy as np
 
 from pymol import cmd
 from functools import reduce
+from dockq import calc_metrics
 from os.path import join, exists
 from biopandas.pdb import PandasPdb
-
 
 class pipeline:
     def __init__(self, option, args):
@@ -40,7 +40,9 @@ class pipeline:
         self.output_dir = args.output_dir
         self.rmsd_names = args.rmsd_names
         self.interface_dist = args.interface_dist
+        self.fnat_path = args.code_dir
 
+        self.dockq = args.dockq
         self.backbone = args.backbone
         self.from_fasta = args.from_fasta
         self.remove_hydrogen = args.remove_hydrogen
@@ -93,9 +95,10 @@ class pipeline:
         with open(self.gt_chain_bd_resid_ids_fn, 'rb') as fp:
             self.gt_chain_bd_ids = pickle.load(fp)
 
+        err_pdb_ids = []
         rmsds = [self.rmsd_names]
         for pdb_id in self.pdb_ids:
-            print(f'Processing output for {pdb_id}')
+            print(f'\r\nProcessing output for {pdb_id}')
             dir = join(self.output_dir, pdb_id + '.fasta')
             if not exists(dir):
                 print(f'directory {dir} doesn\'t exist')
@@ -109,19 +112,28 @@ class pipeline:
             self.remove_linker(pdb_id, pred_fn, pred_removed_linker_fn)
 
             if self.from_fasta and self.prune_and_renumber:
-                print('prune and renumber')
                 pred_aligned_fn = join(dir, self.aligned_fn_str)
                 self.remove_extra_residue_and_renumber\
                     (pdb_id, pred_aligned_fn, pred_removed_linker_fn, gt_pdb_fn,
                      pred_removed_linker_fn)
 
-            out_fn = pred_removed_linker_fn if not self.from_fasta or not self.prune_and_renumber else pred_aligned_fn
+            if not self.from_fasta or not self.prune_and_renumber:
+                out_fn = pred_removed_linker_fn
+            else: out_fn = pred_aligned_fn
 
-            cur_rmsds = self.calculate_rmsd(pdb_id, gt_pdb_fn, out_fn, complex_fn, self.verbose)
-            cur_rmsds.insert(0, pdb_id)
-            rmsds.append(cur_rmsds)
+            if self.dockq:
+                metrics = calc_metrics(out_fn, gt_pdb_fn, self.fnat_path)
+                (irms, Lrms, dockQ) = metrics['irms'], metrics['Lrms'], metrics['dockQ']
+                #print(irms, Lrms, dockQ)
+                rmsds.append([pdb_id, irms, Lrms, dockQ])
+            else:
+                cur_rmsds = self.calculate_rmsd \
+                    (pdb_id, gt_pdb_fn, out_fn, complex_fn, self.verbose)
+                cur_rmsds.insert(0, pdb_id)
+                rmsds.append(cur_rmsds)
 
         utils.write_to_csv(rmsds, self.rmsd_fn)
+        #print('pdbs failed: ', err_pdb_ids)
         cmd.quit()
 
     def parse_to_groups(self):
@@ -209,9 +221,7 @@ class pipeline:
                    chain_start_ids id of first residue in each chain (from pred pdb)
                    gt_chain_bd_ids id of two boundary residue of each chain (from gt pdb)
         '''
-
-        if exists(pred_removed_linker_fn):
-            return
+        if exists(pred_removed_linker_fn): return
 
         chain_names = self.chain_names[pdb_id]
         chain_start_ids = self.chain_start_ids[pdb_id]
@@ -238,7 +248,6 @@ class pipeline:
 
             # make sure gt and pred chain has same length
             gt_resid_lo, gt_resid_hi = gt_chain_bd_ids[i]
-            print(gt_resid_lo, gt_resid_hi, resid_lo, resid_hi)
             if not self.from_fasta:
                 assert(gt_resid_hi - gt_resid_lo + 1 == resid_hi - resid_lo)
 
@@ -290,81 +299,43 @@ class pipeline:
               assume chain_names[-1] is the target chain (e.g. peptide or idr)
         '''
         rmsds = []
-        utils.load_and_select(self.interface_dist, gt_pdb_fn, pred_pdb_fn, self.chain_names[pdb_id],
-                              backbone=self.backbone, remove_hydrogen=self.remove_hydrogen)
+        utils.load_and_select\
+            (self.interface_dist, gt_pdb_fn, pred_pdb_fn,
+             self.chain_names[pdb_id], backbone=self.backbone,
+             remove_hydrogen=self.remove_hydrogen)
 
-        # calculate rmsd without superimposing the receptor chains (sanity check)
-        # two proteins in this case are far apart from each other and thus this
-        # rmsd should be way larger than those above
-        '''
-        if verbose: print(1)
-        rmsd = cmd.rms_cur('native_T','pred_T')
-        if verbose: print(rmsd)
-        rmsds.append(rmsd)
-        if verbose: print(2)
-
-        # also a sanity check, superimpose idr and calculate rmsd for receptor
-        # should be very large as well
-        if verbose: print(3)
-        super = cmd.super('native_T','pred_T')
-        if verbose: print(4)
-        rmsd = cmd.rms_cur('native_R','pred_R')
-        if verbose: print(rmsd)
-        rmsds.append(rmsd)
-        '''
         # superimpose receptor chains and calculate rmsd for idr
-        if verbose: print(5)
         super = cmd.super('native_R','pred_R')
         cmd.color('purple','native_R')
         cmd.color('yellow','native_T')
         cmd.color('gray','pred_R')
         cmd.color('orange','pred_T')
         cmd.multisave(complex_fn, 'all', format='pdb')
-        if verbose: print(6)
+
         rmsd = cmd.rms_cur('native_T','pred_T')
-        print(rmsd)
         rmsds.append(rmsd)
 
         # save two objects after superimposing receptor chain
         cmd.color('gray','native')
         cmd.color('red','pred')
-        #for obj in ['native','pred']:
-        #    cmd.color('yellow', f'{obj}_interface_R')
-        #    cmd.color('blue',f'{obj}_interface_T')
+        for obj in ['native','pred']:
+            cmd.color('yellow', f'{obj}_interface_R')
+            cmd.color('blue',f'{obj}_interface_T')
 
         # calculate rmsd for interface idr only
-        if verbose: print(7)
-        rmsd = cmd.rms_cur('native_interface_R','pred_interface_R')
-        print(rmsd)
+        rmsd = cmd.rms_cur('native_interface_T','pred_interface_T')
         rmsds.append(rmsd)
-
-        '''
-        # rmsd after aligning target chain
-        if verbose: print(8)
-        metrics = cmd.align('native_T','pred_T')
-        if verbose: print(rmsd)
-        rmsds.append(metrics[0])
-
-        # rmsd after aligning receptor chain
-        if verbose: print(9)
-        metrics = cmd.align('native_R','pred_R')
-        if verbose: print(metrics[0])
-        rmsds.append(metrics[0])
-        '''
 
         rmsds = [round(rmsd,3) for rmsd in rmsds]
         if verbose: print(rmsds)
         return rmsds
 
     def assert_fasta(args):
-        ''' check if aa sequence from processed prediction pdb match
-              sequence from gt pdb
+        ''' check if aa sequence from processed prediction pdb match sequence from gt pdb
         '''
         for id in args.pdb_ids:
             pdb_fn = join(args.input_pdb_dir, id + '.pdb')
             pred_fn = join(args.output_dir, id + '.fasta', args.pred_fn)
             seq_1 = utils.read_residue_from_pdb(pdb_fn)
             seq_2 = utils.read_residue_from_pdb(pred_fn)
-            #print(seq_1)
-            #print(seq_2)
             assert(seq_1 == seq_2)

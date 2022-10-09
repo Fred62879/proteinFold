@@ -329,9 +329,9 @@ def load_and_select(dist, gt_pdb_fn, pred_pdb_fn, chain_names, backbone=False, r
     if remove_hydrogen:
         cmd.remove('hydrogens')
 
-    idr_chain_id = chain_names[-1]
-    target_chain_selector = f'chain {idr_chain_id}'
-    receptor_chain_selector = f'not chain {idr_chain_id}'
+    target_chain_id = chain_names[0]
+    target_chain_selector = f'chain {target_chain_id}'
+    receptor_chain_selector = f'not chain {target_chain_id}'
 
     if backbone:
         target_chain_selector += ' and backbone'

@@ -31,6 +31,9 @@ os.chdir('/media/fred/Local Disk/Projects/bioinfo/code')
 pdb_fn_0='/media/fred/Local Disk/Projects/bioinfo/data/input/idr/pdbs/1YCQ.pdb'
 pdb_fn_1='/media/fred/Local Disk/Projects/bioinfo/data/input/idr/pdbs/2AZE.pdb'
 
+pdb_fn='/media/fred/Local Disk/Projects/bioinfo/data/input/ds1/pdbs/1SSE.pdb'
+pred_fn='/media/fred/Local Disk/Projects/bioinfo/data/output/ds1_af_full/poly_g_20_fasta/1SSE.fasta/ranked_0_removed_linker.pdb'
+
 link_fn='/media/fred/Local Disk/Projects/bioinfo/data/output/idr_af_full/poly_g_6/1YCQ.fasta/ranked_0.pdb'
 link_fn='/media/fred/Local Disk/Projects/bioinfo/data/output/idr_af_full/poly_g_6/2AZE.fasta/ranked_0.pdb'
 pred_fn='/media/fred/Local Disk/Projects/bioinfo/data/output/idr_af_full/poly_g_6/2AZE.fasta/ranked_0_removed_linker.pdb'
@@ -260,3 +263,7 @@ a='1PNB,1SSE,1S5R,1Q5W,1QFN,1J2J,1D5S,1C8O,1JGN,1CF4,1OZS,1PD7,1L4W,1ORY,1JMT,1U
 a='1XTG,7JYZ,7P9U,7NDX,2PHG,7E2H,7OYS,7P9U,2PHG,2BBN,7OVC,7EV8,7OYS,1XTG,7LJ0'
 b=a.split(',')
 exclude '2AUH','7NJ1'
+*** Wed
+a='1XTG,1YHN,2AFF,2BBN,2DOH,2DT7,2FHO,2FOT,2GGV,2GP9,2JMX,2JSS,2JU0,2K42,2KC8,2KDU,2KHW,2KJ4,2KJE,2LEH,2OFQ,2PHG,2PQ4,2RNR,2ROZ,2ZQP,3BZV,3CAA,3H8K,3HK3,3M51,3MN7,4LX3,4MMT,5GTU,5L0T,6LPH,6WUD,6XFL,7OVC,7OY3'
+
+exclude: 7P9U 7E2H (outofmeme), 3HM6 7A48 (amber err)
