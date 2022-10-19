@@ -306,6 +306,7 @@ GPU err: 3HM6 (amber miniz err, one residue with no atoms)
          7A48 (amber...)
          7JQD (amber...)
          7S5J (minimization failed after 100 attempts)
+
 GPU out of mem: 7P9U, 7E2H, 7DCP, 7VSI
 
 cpu exclude: '2AUH','7OS1','7NJ1'
