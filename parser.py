@@ -25,9 +25,10 @@ def add_cmd_line_args(parser):
 
     parser.add_argument('--dockq', action='store_true', default=False)
     parser.add_argument('--verbose', action='store_true', default=False)
-    parser.add_argument('--remove_x', action='store_true', default=False)
     parser.add_argument('--backbone', action='store_true', default=False)
     parser.add_argument('--from_fasta', action='store_true', default=False)
+    parser.add_argument('--prune_pdb_atoms', action='store_true', default=False,
+                        help='remove extra atoms from pdb file, currently only used for native pdb')
     parser.add_argument('--prune_and_renumber', action='store_true', default=False)
     parser.add_argument('--separate_fasta', action='store_true', default=False,
                         help='whether each monomer is stored in a single file or all monomers store in same fasta file')
@@ -72,6 +73,15 @@ def add_hardcoded_args(config):
         config['rmsd_names'] = ['pdb_id','ligand (super r)','interface ligand (super r)']
     config['rmsd_fn_str'] += '.csv'
 
+    # add range of atoms to prune
+    # hardcoded, corresponding to pdb_ids
+    config['prune_pdb_ids'] = ['3CAA']
+
+    # range is upper exclusive, 0-based
+    # atom id in pdb file is 1-based
+    # so need to subtract one
+    config['atom_prune_ranges'] = [ [[[1602,1608]]] ]
+
 def add_path(config):
     input_dir = join(config['data_dir'], config['input_str'], config['experiment_id'])
 
@@ -97,11 +107,10 @@ def add_path(config):
 
 
 def select_pdb_ids(config):
-    #config['pdb_ids'] = ['2XZE']
-    #config['pdb_ids'] = ['1YCQ','2AZE'] #,'2RSN']
-    #config['pdb_ids'] = ['1AWR','1EG4','1ELW','1ER8','1JD5']
-    #config['pdb_ids'] = ['1YCQ','2AZE','2M3M','2QTV','2RSN','3DF0','4U7T']
+    config['pdb_ids'] = ['3CAA']
+    #config['pdb_ids'] = ['1JMT', '2AFF', '2DOH', '2GP9', '2ZQP', '3HK3', '3M51', '3MN7', '4LX3', '7OY3']
 
+    '''
     #fn = config['pdb_ids_fn']
     fn = config['pdb_gpu_done_fn']
     excld_fn = config['pdb_exclude_fn']
@@ -124,8 +133,9 @@ def select_pdb_ids(config):
         pdb_ids = np.sort(pdb_ids)
         np.save(fn, pdb_ids)
 
-    config['pdb_ids'] = pdb_ids[:1]
+    config['pdb_ids'] = pdb_ids
     print(f'selected proteins {pdb_ids}')
+    '''
 
 
 def parse_args(parser):

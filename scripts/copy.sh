@@ -8,7 +8,8 @@ server=graham
 #seqs=(1h3h 1h8b 1i8h 1ozs 1sb0 1tce 2czy 2laj 2m3m 2rsn)
 #seqs=(3ixs 3fdt 3g2v 5urn 4gng 5heb 3mxc 3wgx 3g2u)
 #seqs=(3g2u 3mxc 3g2v 3fdt 5urn)
-seqs=(1PNB 1SSE 1S5R 1Q5W 1QFN 1J2J 1D5S 1C8O 1JGN 1CF4 1OZS 1PD7 1L4W 1ORY 1JMT 1UEL 1WLP 1S5R 1QFN 1XR0 1XTG 1YHN 2AFF 2BBN 2DOH 2DT7 2FHO 2FOT 2GGV 2GP9 2JMX 2JSS 2JU0 2K42 2KC8 2KDU 2KHW 2KJ4 2KJE 2LEH 2OFQ 2PHG 2PQ4 2RNR 2ROZ 2ZQP 3BZV 3CAA 3H8K 3HK3 3M51 3MN7 4LX3 4MMT 5GTU 5L0T 6LPH 6WUD 6XFL 7OVC 7OY3)
+#seqs=(1PNB 1SSE 1S5R 1Q5W 1QFN 1J2J 1D5S 1C8O 1JGN 1CF4 1OZS 1PD7 1L4W 1ORY 1JMT 1UEL 1WLP 1S5R 1QFN 1XR0 1XTG 1YHN 2AFF 2BBN 2DOH 2DT7 2FHO 2FOT 2GGV 2GP9 2JMX 2JSS 2JU0 2K42 2KC8 2KDU 2KHW 2KJ4 2KJE 2LEH 2OFQ 2PHG 2PQ4 2RNR 2ROZ 2ZQP 3BZV 3CAA 3H8K 3HK3 3M51 3MN7 4LX3 4MMT 5GTU 5L0T 6LPH 6WUD 6XFL 7OVC 7OY3)
+seqs=(1C8O 1CF4 1D5S 1J2J 1JGN 1JMT 1L4W 1ORY 1OZS 1PD7 1PNB 1Q5W 1QFN 1S5R 1SSE 1UEL 1WLP 1XR0 1XTG 1YHN 2AFF 2AUH 2BBN 2DOH 2DT7 2FHO 2FOT 2GGV 2GP9 2JMX 2JSS 2JU0 2K42 2KC8 2KDU 2KHW 2KJ4 2KJE 2LEH 2OFQ 2PHG 2PQ4 2RNR 2ROZ 2ZQP 3BZV 3CAA 3H8K 3HK3 3HM6 3M1F 3M51 3MN7 4LX3 4MMT 5GTU 5L0T 6LPH 6SBA 6WUD 6XFL 7A48 7B2B 7BY2 7CQP 7DCP 7DHG 7E2H 7EV8 7FB5 7JQD 7JYZ 7LJ0 7LWB 7NDX 7NJ1 7OS1 7OVC 7OY3 7P9U 7PKU 7QV8 7S5J 7TGG 7VLJ 7VSI)
 
 local_data_dir="../../data"
 #local_data_dir="/media/fred/Local Disk/Projects/bioinfo/data"
@@ -35,7 +36,7 @@ fi
 #################
 # download input
 #################
-download_input=true
+download_input=false
 
 cc_input_dir="${cc_data_dir}/input/seq_to_pred"
 
@@ -51,9 +52,6 @@ if $download_input; then
             then
                 mkdir -p $local_data_dir
             fi
-
-            echo $cc_fn
-            echo $cur_local_data_dir
             scp $cc_fn $cur_local_data_dir
         done
     done
@@ -81,6 +79,7 @@ for exp in ${exps[@]}
 do
     for seq in ${seqs[@]}
     do
+        echo $seq
         local_pdb_dir="${local_output_dir}/${exp}/${seq^^}.fasta"
         if [ ! -d $local_pdb_dir ] ; then
             mkdir -p $local_pdb_dir
@@ -90,8 +89,6 @@ do
             for nm in ranked_0.pdb ranking_debug.json
             do
                 ccdir="${cc_output_dir}/${exp}/${seq^^}.fasta/${nm}"
-                #echo $ccdir
-                #echo $local_pdb_dir
                 scp $ccdir $local_pdb_dir
             done
         fi

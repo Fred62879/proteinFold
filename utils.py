@@ -1,12 +1,13 @@
 
 import csv
+import Bio.PDB
 import numpy as np
 
 import warnings
 warnings.filterwarnings("ignore")
 
 from Bio import SeqIO
-from pymol import cmd
+#from pymol import cmd
 from Bio.Seq import Seq
 from os.path import join
 from biopandas.pdb import PandasPdb
@@ -61,28 +62,20 @@ def read_num_atoms_for_each_residue(pdb_fn, remove_H=True):
         num_atoms.append(cur_num_atoms)
     return num_atoms
 
-def read_residue_from_pdb(fn, print=False):
-    '''
-    seq = ''
+def read_residue_from_pdb(fn):
+    pdb_parser = Bio.PDB.PDBParser(QUIET = True)
+    structure = pdb_parser.get_structure("model", fn)
+
+    seq = []
     d3to1 = {'CYS': 'C', 'ASP': 'D', 'SER': 'S', 'GLN': 'Q', 'LYS': 'K','ILE': 'I', 'PRO': 'P', 'THR': 'T', 'PHE': 'F', 'ASN': 'N','GLY': 'G', 'HIS': 'H','LEU': 'L', 'ARG': 'R', 'TRP': 'W','ALA': 'A', 'VAL':'V', 'GLU': 'E', 'TYR': 'Y', 'MET': 'M'}
-    for model in structure:
-        for chain in model:
-            for residue in chain:
-                res = residue.resname
-                if res in d3to1:
-                    seq += d3to1[res]
-        return seq
-    '''
-    fastas = []
-    with open(fn, 'r') as pdb_file:
-        for record in SeqIO.parse(pdb_file, 'pdb-atom'):
-            if print:
-                print('>' + record.id)
-                print(record.seq)
-            else:
-                _ = record.id
-                fastas.append(str(record.seq))
-    return fastas
+    for chain in structure[0]:
+        cur_seq = ''
+        for residue in chain:
+            res = residue.resname
+            if res in d3to1:
+                cur_seq += d3to1[res]
+        seq.append(cur_seq)
+    return seq
 
 def read_residue_id_from_pdb(pdb_fn):
     ''' return a list containing unique residue ids for the whole pdb '''
@@ -163,13 +156,6 @@ def poly_g_link(indir, outdir, chain_start_ids, fasta_group, poly_g, n_g):
     save_fasta(multimer, ofn, id=pdb_id)
     chain_start_ids[pdb_id] = cur_chain_start_ids
 
-def find_subseq_range(seq1, seq2):
-    n, m = len(seq1), len(seq2)
-    for i in range(n):
-        if seq1[i:i+m] == seq2:
-            return np.array([[0,i],[i+m,n]])
-    assert(False)
-
 def find_residue_diff_in_atom_counts(fn1, fn2):
     arr1 = read_num_atoms_for_each_residue(fn1, remove_H=True)
     arr2 = read_num_atoms_for_each_residue(fn2, remove_H=True)
@@ -182,8 +168,11 @@ def find_residue_diff_in_atom_counts(fn1, fn2):
         diff.append(cur_chain_diff)
     return diff
 
-def prune_extra_atoms(pdb_fn, out_fn, ranges):
-    ''' remove extra atoms from pdb files and renumber atom ids '''
+#def prune_pdb_atoms(pdb_fn, out_fn, ranges):
+def prune_pdb_atoms(pdb_fn, ranges):
+    ''' Remove extra atoms from pdb files and renumber atom ids
+        Input: ranges (upper exclusive)
+    '''
     ppdb = PandasPdb()
     _ = ppdb.read_pdb(pdb_fn)
     df = ppdb.df['ATOM']
@@ -224,28 +213,55 @@ def prune_extra_atoms(pdb_fn, out_fn, ranges):
         df.loc[lo:hi,'atom_number'] -= length # upper inclusive
 
     ppdb.df['ATOM'] = df
-    ppdb.to_pdb(out_fn)
+    #ppdb.to_pdb(out_fn)
+    ppdb.to_pdb(pdb_fn)
 
-def find_prune_ranges_all_chains(seqs1, seqs2, chain_ids, prune_X=False):
-    ''' assume seq in seqs1 is longer than corresponding seq in seq2
-        returned range is residue id (1-based)
+def find_subseq_range(seq1, seq2):
+    n, m = len(seq1), len(seq2)
+    #print(seq1)
+    #print(seq2)
+
+    # assume seq1 has extra residues at head
+    # e.g. seq1: ABCD, seq2: BCD...
+    for i in range(n):
+        if m > n - i:
+            # seq2 has extra residues at tail
+            # e.g. seq1: ABCD, seq2: BCDE
+            if seq1[i:] == seq2[:n-i]:
+                return np.array([[0,i]]), np.array([[n-i,m]])
+        else: # seq1 has extra residues at tail
+            if seq1[i:i+m] == seq2:
+                return np.array([[0,i],[i+m,n]]), []
+
+    # assume seq2 has extra residues at head
+    for i in range(m):
+        if n > m - i:
+            # seq1 has extra residues at tail
+            if seq1[:m-i] == seq2[i:]:
+                return np.array([[m-i,n]]), np.array([[0,i]])
+        else: # seq2 has extra residues at tail
+            if seq2[i:i+n] == seq1:
+                return [], np.array([[0,i],[i+n,m]])
+    raise Exception('cannot find subseq of pred and native that match')
+
+def find_prune_ranges_all_chains(seqs1, seqs2, chain_ids):
+    ''' Find range of residues to prune for each chain of the two sequences
+        which will be identical after pruning.
+        Assume the two sequences differ only in residues at two ends.
+          e.g. seqs1 'BCDE' seqs2 'ABCD' where core residues 'BC' are
+               shared and only residues at the two ends differ.
+        Returned range is residue id (1-based)
     '''
-    acc_len = 0
     rnge1, rnge2 = [], []
+    acc_len1, acc_len2 = 0, 0
     for seq1, seq2, chain_id in zip(seqs1, seqs2, chain_ids):
-        if prune_X:
-            cur_rnge1 = find_x_range(seq1)
-            if len(cur_rnge1) != 0:
-                rnge1.append(cur_rnge1 + acc_len)
-            cur_rnge2 = find_x_range(seq2)
-            if len(cur_rnge2) != 0:
-                rnge2.append(cur_rnge2 + acc_len)
-        else:
-            cur_rnge = find_subseq_range(seq1, seq2)
-            if len(cur_rnge) != 0:
-                rnge1.append(cur_rnge + acc_len)
-        acc_len += len(seq1)
-
+        cur_rnge1, cur_rnge2 = find_subseq_range(seq1, seq2)
+        if len(cur_rnge1) != 0:
+            rnge1.append(cur_rnge1 + acc_len1)
+        if len(cur_rnge2) != 0:
+            rnge2.append(cur_rnge2 + acc_len2)
+        acc_len1 += len(seq1)
+        acc_len2 += len(seq2)
     return np.array(rnge1)+1, np.array(rnge2)+1
 
 def prune_renumber_seq_given_range(df, rnge, chain_id, to_remove_atom_ids, renumber_atom_ids, renumber_offsets, prev_hi, acc_offset):

@@ -5,6 +5,12 @@ import configargparse
 
 from parser import parse_args
 
+def prune_atoms(args):
+    ''' Remove extra atoms from pdb file.
+        Currently only used on native pdb.
+    '''
+    pipeline = module.pipeline('init_atom_prune', args)
+    pipeline.prune_pdb_atoms()
 
 def process_input(args):
     ''' Combine multi chains with poly-g linker
@@ -42,7 +48,9 @@ if __name__ == "__main__":
     args = argparse.Namespace(**config)
 
     for operation in args.operations:
-        if operation == 'process_input':
+        if operation == 'prune_atoms':
+            prune_atoms(args)
+        elif operation == 'process_input':
             if args.from_fasta:
                 process_input_from_fasta(args)
             else:

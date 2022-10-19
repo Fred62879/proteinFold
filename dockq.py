@@ -62,36 +62,48 @@ def get_fnat(model, native, exec_path, capri_peptide=False):
     #return interface5A,fnat_bb,nat_correct_bb,nat_total_bb,fnonnat_bb,nonnat_count_bb,model_total_bb
     return info
 
-def get_sample_atoms(atom_for_sup, sample_model):
-    atoms_def_sample=[]
-    for sample_chain in sample_model:
-        chain = sample_chain.id
-        for sample_res in sample_chain:
-            is_het_atm = sample_res.get_id()[0] != ' '
+def get_resid_ids(model):
+    ids = {}
+    for chain in model:
+        chain_id = chain.id
+        if chain_id not in ids:
+            ids[chain_id] = []
+
+        for residue in chain:
+            is_het_atm = residue.get_id()[0] != ' '
+            if is_het_atm: continue
+            resname = residue.get_id()[1]
+            ids[chain_id].append(resname)
+    return ids
+
+def get_atoms(atom_for_sup, model):
+    atoms_def = []
+    for chain in model:
+        chain_id = chain.id
+        for residue in chain:
+            is_het_atm = residue.get_id()[0] != ' '
             if is_het_atm: continue
 
-            resname = sample_res.get_id()[1]
-            key = str(resname) + chain
+            resname = residue.get_id()[1]
+            key = str(resname) + chain_id
             for a in atom_for_sup:
                 atom_key = key + '.' + a
-                if a in sample_res:
-                    atoms_def_sample.append(atom_key)
-    return atoms_def_sample
+                if a in residue:
+                    atoms_def.append(atom_key)
+    return atoms_def
 
-def get_ref_sample_common_atoms(atom_for_sup, atoms_def_sample, ref_model):
+def get_common_atoms(atom_for_sup, atoms_def_sample, ref_model):
     atoms_def_in_both = []
     for ref_chain in ref_model:
-        chain = ref_chain.id
+        chain_id = ref_chain.id
         for ref_res in ref_chain:
             is_het_atm = ref_res.get_id()[0] != ' '
-            if is_het_atm:
-                # print ref_res.get_id()
-                continue
+            if is_het_atm: continue
 
-            resname=ref_res.get_id()[1]
-            key=str(resname) + chain
+            resname = ref_res.get_id()[1]
+            key = str(resname) + chain_id
             for a in atom_for_sup:
-                atom_key=key + '.' + a
+                atom_key = key + '.' + a
                 if a in ref_res and atom_key in atoms_def_sample:
                     if atom_key in atoms_def_in_both:
                         print(atom_key + ' already added (Native)!!!')
@@ -99,16 +111,16 @@ def get_ref_sample_common_atoms(atom_for_sup, atoms_def_sample, ref_model):
     return atoms_def_in_both
 
 def get_sample_interface(atom_for_sup, sample_model, interface, atoms_def_in_both):
-    ''' Return: chain_res - residue for each chain of sample pdb
+    ''' Return: sample_res - residue for each chain of sample pdb
                 sample_atoms - atoms for interface residues in sample pdb
                 common_interface - interface residues
     '''
-    chain_res, sample_atoms, common_interface = {}, [], []
+    sample_chain_res, sample_atoms, common_interface = {}, [], []
 
     for sample_chain in sample_model:
         chain = sample_chain.id
-        if chain not in list(chain_res.keys()):
-            chain_res[chain]=[]
+        if chain not in list(sample_chain_res.keys()):
+            sample_chain_res[chain] = []
 
         for sample_res in sample_chain:
             is_het_atm = sample_res.get_id()[0] != ' '
@@ -116,7 +128,7 @@ def get_sample_interface(atom_for_sup, sample_model, interface, atoms_def_in_bot
 
             resname = sample_res.get_id()[1]
             key = str(resname) + chain
-            chain_res[chain].append(key)
+            sample_chain_res[chain].append(key)
 
             if key in interface:
                 for a in atom_for_sup:
@@ -125,10 +137,10 @@ def get_sample_interface(atom_for_sup, sample_model, interface, atoms_def_in_bot
                         sample_atoms.append(sample_res[a])
                 common_interface.append(key)
 
-    return chain_res, sample_atoms, common_interface
+    return sample_chain_res, sample_atoms, common_interface
 
-def get_ref_interface(ref_model, sample_res, atom_for_sup, atoms_def_in_both, common_interface):
-    ''' Return: chain_ref -
+def get_ref_interface(ref_model, sample_chain_res, atom_for_sup, atoms_def_in_both, common_interface):
+    ''' Return: chain_ref - ref protein (common atom, common residue)
                 ref_atoms - atoms for interface residues in ref pdb
                 common_residues - residues in both sample and ref
     '''
@@ -146,8 +158,7 @@ def get_ref_interface(ref_model, sample_res, atom_for_sup, atoms_def_in_both, co
             resname = ref_res.get_id()[1]
             res_key = str(resname) + chain
 
-            res_in_sample = res_key in sample_res[chain]
-            if res_in_sample:
+            if res_key in sample_chain_res[chain]:
                 for a in atom_for_sup:
                     atom_key = res_key + '.' + a
                     if a in ref_res and atom_key in atoms_def_in_both:
@@ -192,6 +203,10 @@ def assert_selections(receptor_chain, ligand_chain, chain_ref, chain_sample):
         "Different number of atoms in native and model receptor (chain %c) %d %d\n" % \
         (receptor_chain, len(chain_ref[receptor_chain]), len(chain_sample[receptor_chain]))
 
+    assert len(chain_ref[receptor_chain]) != 0 and  len(chain_sample[receptor_chain]) != 0, \
+        "Zero number of equivalent atoms in native and model receptor (chain %c) %d %d\n" % \
+        (receptor_chain, len(chain_ref[receptor_chain]), len(chain_sample[receptor_chain]))
+
     assert len(chain_ref[ligand_chain]) != 0 or len(chain_sample[ligand_chain]) != 0, \
         "Zero number of equivalent atoms in native and model ligand (chain %s) %d %d.\anCheck that the residue numbers in model and native is consistent\n" % \
         (ligand_chain, len(chain_ref[ligand_chain]), len(chain_sample[ligand_chain]))
@@ -203,25 +218,36 @@ def assert_selections(receptor_chain, ligand_chain, chain_ref, chain_sample):
 def load_and_select(atom_for_sup, sample_model, ref_model, info):
     interface = info['interface']
 
-    atoms_def_sample = get_sample_atoms(atom_for_sup, sample_model)
-    atoms_def_in_both = get_ref_sample_common_atoms\
+    # all atoms in sample model
+    atoms_def_sample = get_atoms(atom_for_sup, sample_model)
+    # atoms in both sample and ref model
+    atoms_def_in_both = get_common_atoms \
         (atom_for_sup, atoms_def_sample, ref_model)
-    sample_res, sample_atoms, common_interface = get_sample_interface\
+    # residues in sample pdb
+    # atoms of sample (common)
+    #
+    sample_chain_res, sample_atoms, common_interface = get_sample_interface \
         (atom_for_sup, sample_model, interface, atoms_def_in_both)
-    chain_ref, ref_atoms, common_residues = get_ref_interface\
-        (ref_model, sample_res, atom_for_sup, atoms_def_in_both, common_interface)
-    chain_sample = get_sample_common\
+    # final ref protein (common residue, common atom)
+    # atoms of ref (common)
+    # residues in both ref and sample
+    chain_ref, ref_atoms, common_residues = get_ref_interface \
+        (ref_model, sample_chain_res, atom_for_sup, atoms_def_in_both, common_interface)
+
+    chain_sample = get_sample_common \
         (sample_model, atom_for_sup, atoms_def_in_both, common_residues)
 
     assert len(ref_atoms) != 0, "length of native is zero"
     assert len(sample_atoms) != 0, "length of model is zero"
-    assert len(ref_atoms) == len(sample_atoms), "Different number of atoms in native and model %d %d\n" % (len(ref_atoms), len(sample_atoms))
+    assert len(ref_atoms) == len(sample_atoms), \
+        "Different number of atoms in native and model %d %d\n" \
+        % (len(ref_atoms), len(sample_atoms))
 
     # reorder chains to make sure ligand is shorter than receptor
     (chain1, chain2) = list(chain_sample.keys())
 
-    len1 = len(sample_res[chain1])
-    len2 = len(sample_res[chain2])
+    len1 = len(sample_chain_res[chain1])
+    len2 = len(sample_chain_res[chain2])
     assert len1 != 0, "%s chain has zero length!\n" % chain1
     assert len2 != 0, "%s chain has zero length!\n" % chain2
 
@@ -285,6 +311,9 @@ def calc_DockQ(info, ref_model, sample_model, ref_atoms, sample_atoms, chain_ref
     # calculate dockq
     DockQ=(float(fnat) + 1/(1+(irms/1.5)*(irms/1.5)) + 1/(1+(Lrms/8.5)*(Lrms/8.5)))/3
     info['dockQ'] = DockQ
+
+    for metric in ['irms', 'Lrms', 'dockQ']:
+        info[metric] = round(info[metric], 3)
     return info
 
 def calc_metrics(model, native, exec_path, use_CA_only=False, capri_peptide=False):
