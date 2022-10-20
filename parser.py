@@ -21,8 +21,6 @@ def add_cmd_line_args(parser):
     parser.add_argument('--n_seqs', type=int, default=2, help='number of sequences to predict')
     parser.add_argument('--interface_dist', type=int, default=6, help='dist in angstrom to define interface residues')
 
-    parser.add_argument('--pred_fn', type=str, default='ranked_0')
-
     parser.add_argument('--dockq', action='store_true', default=False)
     parser.add_argument('--verbose', action='store_true', default=False)
     parser.add_argument('--backbone', action='store_true', default=False)
@@ -107,11 +105,10 @@ def add_path(config):
 
 
 def select_pdb_ids(config):
-    #config['pdb_ids'] = ['3CAA']
-    config['pdb_ids'] = ['2GGV','3H8K','5L0T']
+    #config['pdb_ids'] = ['1C8O','1CF4','1D5S']
+    #config['pdb_ids'] = ['2GGV','3H8K','5L0T']
     #config['pdb_ids'] = ['1JMT', '2AFF', '2DOH', '2GP9', '2ZQP', '3HK3', '3M51', '3MN7', '4LX3','6SBA','7BY2','7OY3']
 
-    '''
     fn = config['pdb_ids_fn']
     excld_fn = config['pdb_exclude_fn']
     gpu_done_fn = config['pdb_gpu_done_fn']
@@ -138,7 +135,6 @@ def select_pdb_ids(config):
 
     config['pdb_ids'] = pdb_ids
     print(f'selected proteins {pdb_ids}')
-    '''
 
 
 def parse_args(parser):

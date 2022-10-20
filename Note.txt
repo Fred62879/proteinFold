@@ -28,8 +28,11 @@ from Bio import SeqIO;from Bio.Seq import Seq;from Bio.SeqRecord import SeqRecor
 
 os.chdir('/media/fred/Local Disk/projects/bioinfo/code')
 
-pdb_fn_0='/media/fred/Local Disk/projects/bioinfo/data/input/idr/pdbs/1YCQ.pdb'
-pdb_fn_1='/media/fred/Local Disk/projects/bioinfo/data/input/idr/pdbs/2AZE.pdb'
+pdb_fn_0='/media/fred/Local Disk/projects/bioinfo/data/input/ds1/pdbs/1C8O.pdb'
+pdb_fn_1='/media/fred/Local Disk/projects/bioinfo/data/input/ds1/pdbs/1Q5W.pdb'
+
+pred_fn0='/media/fred/Local Disk/projects/bioinfo/data/output/ds1_af_full/poly_g_20_fasta/1C8O.fasta/ranked_0_removed_linker_aligned.pdb'
+pred_fn1='/media/fred/Local Disk/projects/bioinfo/data/output/ds1_af_full/poly_g_20_fasta/1Q5W.fasta/ranked_0_removed_linker_aligned.pdb'
 
 pdb_fn='../data/input/ds1/pdbs/1CF4.pdb'
 pred_fn='../data/output/ds1_af_full/poly_g_20_fasta/1CF4.fasta/ranked_0_removed_linker.pdb'
