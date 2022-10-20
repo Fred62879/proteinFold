@@ -5,12 +5,12 @@ import configargparse
 
 from parser import parse_args
 
-def prune_atoms(args):
+def prune_extra_atoms(args):
     ''' Remove extra atoms from pdb file.
         Currently only used on native pdb.
     '''
     pipeline = module.pipeline('init_atom_prune', args)
-    pipeline.prune_pdb_atoms()
+    pipeline.prune_extra_atoms()
 
 def process_input(args):
     ''' Combine multi chains with poly-g linker
@@ -40,6 +40,10 @@ def process_output(args):
     pipeline = module.pipeline('init_output_procs', args)
     pipeline.process_output()
 
+def locate_extra_atoms(args):
+    ''' Locate extra atoms in gt pdb files '''
+    pipeline = module.pipeline('init_atom_locating', args)
+    pipeline.locate_extra_atoms()
 
 if __name__ == "__main__":
 
@@ -48,14 +52,16 @@ if __name__ == "__main__":
     args = argparse.Namespace(**config)
 
     for operation in args.operations:
-        if operation == 'prune_atoms':
-            prune_atoms(args)
-        elif operation == 'process_input':
+        if operation == 'process_input':
             if args.from_fasta:
                 process_input_from_fasta(args)
             else:
                 process_input(args)
         elif operation == 'process_output':
             process_output(args)
+        elif operation == 'locate_extra_atoms':
+            locate_extra_atoms(args)
+        elif operation == 'prune_extra_atoms':
+            prune_extra_atoms(args)
         elif operation == 'assert_fasta':
             assert_fasta(args)

@@ -4,7 +4,7 @@ import utils
 import pickle
 import numpy as np
 
-#from pymol import cmd
+from pymol import cmd
 from functools import reduce
 from dockq import calc_metrics
 from os.path import join, exists
@@ -29,7 +29,11 @@ class pipeline:
             self._init_input_processing_from_fasta(args)
         elif option == 'init_output_procs':
             self._init_output_processing(args)
+        elif option == 'init_atom_locating':
+            self._init_atom_locating(args)
 
+    ###############
+    # init methods
     def _init_input_processing(self, args):
         self.pdb_ids_fn = args.pdb_ids_fn
         self.linked_fasta_dir = args.linked_fasta_dir
@@ -38,11 +42,11 @@ class pipeline:
         self.source_fasta_dir = args.source_fasta_dir
         self.linked_fasta_dir = args.linked_fasta_dir
 
-    def _init_atom_prune(self, args):
-        self.prune_pdb_ids = args.prune_pdb_ids
-        self.atom_prune_ranges = args.atom_prune_ranges
-
     def _init_output_processing(self, args):
+        ''' pred_fn is filename of alphafold prediction
+            if predict using fasta, the processing output is stored in aligned_fn
+            otherwise stored in removed_linker_fn
+        '''
         self.output_dir = args.output_dir
         self.rmsd_names = args.rmsd_names
         self.interface_dist = args.interface_dist
@@ -60,13 +64,21 @@ class pipeline:
         self.aligned_fn_str = args.aligned_fn_str
         self.removed_linker_fn_str = args.removed_linker_fn_str
 
-    def prune_pdb_atoms(self):
-        ''' prune_pdb_ids and prune_ranges are hardcoded in parser.py
-        '''
-        for pdb_id, rnge in zip(self.prune_pdb_ids, self.atom_prune_ranges):
-            fn = join(self.input_pdb_dir, pdb_id + '.pdb')
-            utils.prune_pdb_atoms(fn, rnge)
+    def _init_atom_prune(self, args):
+        self.prune_pdb_ids = args.prune_pdb_ids
+        self.atom_prune_ranges = args.atom_prune_ranges
 
+    def _init_atom_locating(self, args):
+        self.pdb_ids = args.pdb_ids
+        self.input_pdb_dir = args.input_pdb_dir
+
+        self.from_fasta = args.from_fasta
+        self.output_dir = args.output_dir
+        self.pred_fn_str = args.pred_fn_str
+        self.aligned_fn_str = args.aligned_fn_str
+
+    #######################
+    # processing functions
     def process_input(self):
         chain_start_resid_ids = self.generate_fasta_from_pdb()
         gt_chain_bd_resid_ids = self.read_bd_resid_id_all()
@@ -78,7 +90,7 @@ class pipeline:
             pickle.dump(gt_chain_bd_resid_ids, fp)
 
         # get chain names and store locally
-        chain_names = self.read_chain_ids_all()
+        chain_names = self.read_chain_names_all()
         with open(self.chain_names_fn, 'wb') as fp:
             pickle.dump(chain_names, fp)
 
@@ -94,12 +106,29 @@ class pipeline:
             pickle.dump(gt_chain_bd_resid_ids, fp)
 
         # get chain names and store locally
-        chain_names = self.read_chain_ids_all()
+        chain_names = self.read_chain_names_all()
         with open(self.chain_names_fn, 'wb') as fp:
             pickle.dump(chain_names, fp)
 
-    ''' Below are output processing methods '''
+    def locate_extra_atoms(self):
+        for pdb_id in self.pdb_ids:
+            print(f'{pdb_id} extra atoms: ')
+            pdb_fn = join(self.input_pdb_dir, pdb_id + '.pdb')
+            dir = join(self.output_dir, pdb_id + '.fasta')
+            if self.from_fasta:
+                pred_fn = join(dir, self.aligned_fn_str)
+            else:
+                pred_fn = join(dir, self.removed_linker_fn_str)
+            ret = utils.find_residue_diff_in_atom_counts(pdb_fn, pred_fn)
+            print(ret)
 
+    def prune_extra_atoms(self):
+        ''' prune_pdb_ids and prune_ranges are hardcoded in parser.py '''
+        for pdb_id, rnge in zip(self.prune_pdb_ids, self.atom_prune_ranges):
+            fn = join(self.input_pdb_dir, pdb_id + '.pdb')
+            utils.prune_pdb_atoms(fn, rnge)
+
+    ''' Below are output processing methods '''
     def process_output_for_one_pdb(self, pdb_id):
         print(f'\r\nProcessing output for {pdb_id}')
         dir = join(self.output_dir, pdb_id + '.fasta')
@@ -159,10 +188,11 @@ class pipeline:
             else:
                 metrics.append(cur_metrics)
 
-        if not self.dockq:
-            cmd.quit()
         utils.write_to_csv(metrics, self.rmsd_fn)
         print('pdbs failed: ', failed_pdbs)
+
+        if not self.dockq:
+            cmd.quit()
 
     def parse_to_groups(self):
         prev_id = ''
@@ -194,11 +224,11 @@ class pipeline:
             utils.read_chain_bd_resid_id_from_pdb(fn, id, res)
         return res
 
-    def read_chain_ids_all(self, gt_model_nm='native'):
+    def read_chain_names_all(self, gt_model_nm='native'):
         chain_names = {}
         for pdb_id in self.pdb_ids:
             fn = join(self.input_pdb_dir, pdb_id + '.pdb')
-            chain_name = utils.read_chain_id_from_pdb(fn)
+            chain_name = utils.read_chain_name_from_pdb(fn)
             chain_names[pdb_id] = chain_name
         return chain_names
 
@@ -283,12 +313,11 @@ class pipeline:
 
             # locate all atoms in pred pdb for current chain
             atom_ids = df[ (df['residue_number'] >= resid_lo) &
-                           (df['residue_number'] < resid_hi)  &
-                           (df['chain_id'] == chain_names[i]) ].index
-            ''' chain_id comparison here can be removed since pred protein
-                has pdb_id ordered consecutively from 1 to n across chains.
-                However, this is necessary for gt pdb where different
-                chain may have residues with same id.
+                           (df['residue_number'] < resid_hi)].index
+                           #(df['chain_id'] == chain_names[i]) ].index
+            ''' Don't perform chain_id comparison here since linked pdb has
+                one single chain. However, this is necessary for gt pdb where
+                different chain may have residues with same id.
             '''
 
             atom_lo, atom_hi = atom_ids[0], atom_ids[-1]
@@ -345,12 +374,12 @@ class pipeline:
         # superimpose receptor chains and calculate rmsd for idr
         super = cmd.super('native_R','pred_R')
         cmd.color('purple','native_R')
-        cmd.color('yellow','native_T')
+        cmd.color('yellow','native_L')
         cmd.color('gray','pred_R')
-        cmd.color('orange','pred_T')
+        cmd.color('orange','pred_L')
         cmd.multisave(complex_fn, 'all', format='pdb')
 
-        rmsd = cmd.rms_cur('native_T','pred_T')
+        rmsd = cmd.rms_cur('native_L','pred_L')
         rmsds.append(rmsd)
 
         # save two objects after superimposing receptor chain
@@ -358,10 +387,10 @@ class pipeline:
         cmd.color('red','pred')
         for obj in ['native','pred']:
             cmd.color('yellow', f'{obj}_interface_R')
-            cmd.color('blue',f'{obj}_interface_T')
+            cmd.color('blue',f'{obj}_interface_L')
 
         # calculate rmsd for interface idr only
-        rmsd = cmd.rms_cur('native_interface_T','pred_interface_T')
+        rmsd = cmd.rms_cur('native_interface_L','pred_interface_L')
         rmsds.append(rmsd)
 
         rmsds = [round(rmsd,3) for rmsd in rmsds]

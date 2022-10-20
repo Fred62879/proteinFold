@@ -7,7 +7,7 @@ import warnings
 warnings.filterwarnings("ignore")
 
 from Bio import SeqIO
-#from pymol import cmd
+from pymol import cmd
 from Bio.Seq import Seq
 from os.path import join
 from biopandas.pdb import PandasPdb
@@ -37,7 +37,7 @@ def save_fasta(seq, fn, id='0'):
     seq = SeqRecord(Seq(seq),id=id)
     SeqIO.write(seq, fn, 'fasta')
 
-def read_num_atoms_for_each_residue(pdb_fn, remove_H=True):
+def count_num_atoms_for_each_residue(pdb_fn, remove_H=True):
     ppdb = PandasPdb()
     _ = ppdb.read_pdb(pdb_fn)
     df = ppdb.df['ATOM']
@@ -47,7 +47,7 @@ def read_num_atoms_for_each_residue(pdb_fn, remove_H=True):
         df = df[valid_ids]
 
     num_atoms = []
-    chain_ids = read_chain_id_from_pdb(pdb_fn)
+    chain_ids = read_chain_name_from_pdb(pdb_fn)
     for chain_id in chain_ids:
         cur_num_atoms = {}
         cur_chain_atom_ids = df['chain_id'] == chain_id
@@ -72,7 +72,7 @@ def read_residue_from_pdb(fn):
         cur_seq = ''
         for residue in chain:
             res = residue.resname
-            if res in d3to1:
+            if res in d3to1: # ignore hetatm
                 cur_seq += d3to1[res]
         seq.append(cur_seq)
     return seq
@@ -84,7 +84,7 @@ def read_residue_id_from_pdb(pdb_fn):
     df = ppdb.df['ATOM']
 
     resid_ids = []
-    chain_ids = read_chain_id_from_pdb(pdb_fn)
+    chain_ids = read_chain_name_from_pdb(pdb_fn)
     for chain_id in chain_ids:
         cur_chain_atom_ids = df['chain_id'] == chain_id
         dup_resid_ids = list(df.loc[cur_chain_atom_ids,'residue_number'])
@@ -94,7 +94,7 @@ def read_residue_id_from_pdb(pdb_fn):
 
     return resid_ids
 
-def read_chain_id_from_pdb(pdb_fn):
+def read_chain_name_from_pdb(pdb_fn):
     ''' read chain identifier, de-depulicate while preserving order '''
     ppdb = PandasPdb()
     _ = ppdb.read_pdb(pdb_fn)
@@ -111,7 +111,7 @@ def read_chain_bd_resid_id_from_pdb(pdb_fn, pdb_id, bd_resid_ids):
     dfh = ppdb.df['HETATM']
 
     cur_bd_resid_ids = []
-    chain_ids = read_chain_id_from_pdb(pdb_fn)
+    chain_ids = read_chain_name_from_pdb(pdb_fn)
     for chain_id in chain_ids:
         cur_chain_atom_ids = df['chain_id'] == chain_id
         dup_resid_ids = list(df.loc[cur_chain_atom_ids,'residue_number'])
@@ -157,8 +157,8 @@ def poly_g_link(indir, outdir, chain_start_ids, fasta_group, poly_g, n_g):
     chain_start_ids[pdb_id] = cur_chain_start_ids
 
 def find_residue_diff_in_atom_counts(fn1, fn2):
-    arr1 = read_num_atoms_for_each_residue(fn1, remove_H=True)
-    arr2 = read_num_atoms_for_each_residue(fn2, remove_H=True)
+    arr1 = count_num_atoms_for_each_residue(fn1, remove_H=True)
+    arr2 = count_num_atoms_for_each_residue(fn2, remove_H=True)
     diff = []
     for map1,map2 in zip(arr1,arr2):
         cur_chain_diff = []
@@ -171,7 +171,8 @@ def find_residue_diff_in_atom_counts(fn1, fn2):
 #def prune_pdb_atoms(pdb_fn, out_fn, ranges):
 def prune_pdb_atoms(pdb_fn, ranges):
     ''' Remove extra atoms from pdb files and renumber atom ids
-        Input: ranges (upper exclusive)
+        @Param
+          ranges (upper exclusive)
     '''
     ppdb = PandasPdb()
     _ = ppdb.read_pdb(pdb_fn)
@@ -200,6 +201,7 @@ def prune_pdb_atoms(pdb_fn, ranges):
             acc_lens.append(acc_len)
             acc_len += hi - lo + 1
         atom_offset += 1
+
     acc_lens.append(acc_len)
     decrmt_rnge.append([id_lo, len(df)-1])
 
@@ -218,8 +220,6 @@ def prune_pdb_atoms(pdb_fn, ranges):
 
 def find_subseq_range(seq1, seq2):
     n, m = len(seq1), len(seq2)
-    #print(seq1)
-    #print(seq2)
 
     # assume seq1 has extra residues at head
     # e.g. seq1: ABCD, seq2: BCD...
@@ -336,6 +336,16 @@ def prune_renumber_seq_given_ranges(in_fn, out_fn, chain_ids, ranges, gt_chain_b
     ppdb.df['ATOM'] = df
     ppdb.to_pdb(out_fn)
 
+def set_chain_selector(receptor_chain_name, ligand_chain_name, backbone):
+    ligand_chain_selector = f'chain {ligand_chain_name}'
+    receptor_chain_selector = f'chain {receptor_chain_name}'
+
+    if backbone:
+        ligand_chain_selector += ' and backbone'
+        receptor_chain_selector += ' and backbone'
+
+    return receptor_chain_selector, ligand_chain_selector
+
 def load_and_select(dist, gt_pdb_fn, pred_pdb_fn, chain_names, backbone=False, remove_hydrogen=False):
     cmd.delete('all')
     cmd.load(gt_pdb_fn, 'native')
@@ -345,22 +355,38 @@ def load_and_select(dist, gt_pdb_fn, pred_pdb_fn, chain_names, backbone=False, r
     if remove_hydrogen:
         cmd.remove('hydrogens')
 
-    target_chain_id = chain_names[0]
-    target_chain_selector = f'chain {target_chain_id}'
-    receptor_chain_selector = f'not chain {target_chain_id}'
+    # only deal with dimers
+    assert(len(chain_names) == 2)
 
-    if backbone:
-        target_chain_selector += ' and backbone'
-        receptor_chain_selector += ' and backbone'
+    # assume 2nd chain is ligand for now
+    receptor_chain_selector, ligand_chain_selector = set_chain_selector \
+        (chain_names[0], chain_names[1], backbone)
 
     for obj in ['native','pred']:
+        # select ligand and receptor based on initial assumption
         cmd.select(f'{obj}_R', f'{obj} and {receptor_chain_selector}')
-        cmd.select(f'{obj}_T', f'{obj} and {target_chain_selector}')
-        cmd.select(f'{obj}_R_interface_init', f'byres {obj}_R within {dist} of {obj}_T')
-        cmd.select(f'interface_{obj}', f'{obj}_R_interface_init + byres {obj}_T within {dist} of {obj}_R_interface_init')
+        cmd.select(f'{obj}_L', f'{obj} and {ligand_chain_selector}')
 
-        # color receptor interface of {obj} in yellow
+        # make sure ligand has more atoms than receptor, otherwise reverse them
+        count_r = cmd.count_atoms(f'{obj}_R')
+        count_l = cmd.count_atoms(f'{obj}_L')
+
+        if count_r < count_l:
+            print(f'{gt_pdb_fn[-8:-4]} has receptor and ligand reverted')
+            # update selectors
+            receptor_chain_selector, ligand_chain_selector = set_chain_selector \
+                (chain_names[1], chain_names[0], backbone)
+
+            # redo selection
+            cmd.select(f'{obj}_R', f'{obj} and {receptor_chain_selector}')
+            cmd.select(f'{obj}_L', f'{obj} and {ligand_chain_selector}')
+
+        # select receptor interface atoms
+        cmd.select(f'{obj}_L_interface_init', f'byres {obj}_L within {dist} of {obj}_L')
+        cmd.select(f'interface_{obj}', f'{obj}_L_interface_init + byres {obj}_L within {dist} of {obj}_L_interface_init')
+
+        # color receptor interface in yellow
         cmd.select(f'{obj}_interface_R', f'interface_{obj} and {receptor_chain_selector}')
-        cmd.select(f'{obj}_interface_T', f'interface_{obj} and {target_chain_selector}')
+        cmd.select(f'{obj}_interface_L', f'interface_{obj} and {ligand_chain_selector}')
         cmd.color('yellow', f'{obj}_interface_R')
-        cmd.color('blue',f'{obj}_interface_T')
+        cmd.color('blue',f'{obj}_interface_L')

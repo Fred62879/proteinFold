@@ -107,19 +107,22 @@ def add_path(config):
 
 
 def select_pdb_ids(config):
-    config['pdb_ids'] = ['3CAA']
-    #config['pdb_ids'] = ['1JMT', '2AFF', '2DOH', '2GP9', '2ZQP', '3HK3', '3M51', '3MN7', '4LX3', '7OY3']
+    #config['pdb_ids'] = ['3CAA']
+    config['pdb_ids'] = ['2GGV','3H8K','5L0T']
+    #config['pdb_ids'] = ['1JMT', '2AFF', '2DOH', '2GP9', '2ZQP', '3HK3', '3M51', '3MN7', '4LX3','6SBA','7BY2','7OY3']
 
     '''
-    #fn = config['pdb_ids_fn']
-    fn = config['pdb_gpu_done_fn']
+    fn = config['pdb_ids_fn']
     excld_fn = config['pdb_exclude_fn']
+    gpu_done_fn = config['pdb_gpu_done_fn']
 
-    if exists(fn):
+    if exists(gpu_done_fn):
+        pdb_ids = np.load(gpu_done_fn)
+        pdb_ids = np.sort(pdb_ids)
+    elif exists(fn):
         pdb_ids = np.load(fn)
         if exists(excld_fn):
             exclude_ids = np.load(excld_fn)
-            #exclude_ids = np.append(exclude_ids,['2M3M','4X34'])
             pdb_ids = np.array(list( set(pdb_ids) - set(exclude_ids) ))
         pdb_ids = np.sort(pdb_ids)
     else:
