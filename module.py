@@ -31,6 +31,8 @@ class pipeline:
             self._init_output_processing(args)
         elif option == 'init_atom_locating':
             self._init_atom_locating(args)
+        elif option == 'init_metric_plotting':
+            self._init_metric_plotting(args)
 
     ###############
     # init methods
@@ -76,6 +78,9 @@ class pipeline:
         self.output_dir = args.output_dir
         self.pred_fn_str = args.pred_fn_str
         self.aligned_fn_str = args.aligned_fn_str
+
+    def _init_metric_plotting(self, args):
+
 
     #######################
     # processing functions
@@ -128,6 +133,9 @@ class pipeline:
             fn = join(self.input_pdb_dir, pdb_id + '.pdb')
             utils.prune_pdb_atoms(fn, rnge)
 
+    def plot_metrics(self):
+
+
     ''' Below are output processing methods '''
     def process_output_for_one_pdb(self, pdb_id):
         print(f'\r\nProcessing output for {pdb_id}')
@@ -164,6 +172,9 @@ class pipeline:
             cur_metrics = self.calculate_rmsd \
                 (pdb_id, gt_pdb_fn, out_fn, complex_fn, self.verbose)
             cur_metrics.insert(0, pdb_id)
+
+        variables = utils.get_metric_plot_variables()
+        cur_metrics = np.append(cur_metrics, variables)
         return cur_metrics
 
     def process_output(self):
@@ -229,6 +240,7 @@ class pipeline:
         for pdb_id in self.pdb_ids:
             fn = join(self.input_pdb_dir, pdb_id + '.pdb')
             chain_name = utils.read_chain_name_from_pdb(fn)
+            utils.assign_receptor_ligand_chain(fn, chain_name)
             chain_names[pdb_id] = chain_name
         return chain_names
 

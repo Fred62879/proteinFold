@@ -298,18 +298,18 @@ native  yellow   purple    yellow     purple
 pred    orange    gray     orange     gray
 
 
-
 - ds1 record
-CPU err: 7DHG (HMM oom)
+CPU err: 2AUH 7OS1 7NJ1 (no record)
+         7DHG (HMM oom)
 
 GPU err: 3HM6 (amber miniz err, one residue with no atoms)
          7A48 (amber...)
          7JQD (amber...)
          7S5J (minimization failed after 100 attempts)
-GPU out of mem: 7P9U, 7E2H, 7DCP
+GPU out of mem: 7P9U, 7E2H, 7DCP, 7VSI
 
 cpu exclude: '2AUH','7OS1','7NJ1'
-gpu exclude: '3HM6',7A48',7JQD','7S5J','7P9U','7E2H','7DCP'
+gpu exclude: '3HM6',7A48',7JQD','7S5J'
 
 GPU done: '1C8O,1CF4,1D5S,1J2J,1JGN,1JMT,1L4W,1ORY,1OZS,1PD7,1PNB,1Q5W,1QFN,1S5R,1SSE,1UEL,1WLP,1XR0,1XTG,1YHN,2AFF,2BBN,2DOH,2DT7,2FHO,2FOT,2GGV,2GP9,2JMX,2JSS,2JU0,2K42,2KC8,2KDU,2KHW,2KJ4,2KJE,2LEH,2OFQ,2PHG,2PQ4,2RNR,2ROZ,2ZQP,3BZV,3CAA,3H8K,3HK3,3M1F,3M51,3MN7,4LX3,4MMT,5GTU,5L0T,6LPH,6SBA,6WUD,6XFL,7B2B,7BY2,7CQP,7FB5,7OVC,7OY3'
 
@@ -326,3 +326,7 @@ After updating script (revert two chains)
 rmsd warning: 1JGN (CRYST1 record)
               2FOT (no atoms selected)
               2GGV 3H8K 5L0T (atom counts mismatch)
+*** Thu
+- ds1 record
+gpu done
+'7EV8,7JYZ,7LJ0,7LWB,7NDX,7PKU,7QV8,7TGG,7VLJ'

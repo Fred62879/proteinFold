@@ -45,6 +45,12 @@ def locate_extra_atoms(args):
     pipeline = module.pipeline('init_atom_locating', args)
     pipeline.locate_extra_atoms()
 
+def plot_metrics(args):
+    ''' plot metrics against specified variables '''
+    pipeline = module.pipeline('init_metric_plotting', args)
+    pipeline.plot_metrics()
+
+
 if __name__ == "__main__":
 
     parser = configargparse.ArgumentParser()
@@ -63,5 +69,7 @@ if __name__ == "__main__":
             locate_extra_atoms(args)
         elif operation == 'prune_extra_atoms':
             prune_extra_atoms(args)
+        elif operation == 'plot_metrics':
+            plot_metrics(args)
         elif operation == 'assert_fasta':
             assert_fasta(args)

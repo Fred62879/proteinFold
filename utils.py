@@ -336,9 +336,9 @@ def prune_renumber_seq_given_ranges(in_fn, out_fn, chain_ids, ranges, gt_chain_b
     ppdb.df['ATOM'] = df
     ppdb.to_pdb(out_fn)
 
-def set_chain_selector(receptor_chain_name, ligand_chain_name, backbone):
-    ligand_chain_selector = f'chain {ligand_chain_name}'
-    receptor_chain_selector = f'chain {receptor_chain_name}'
+def set_chain_selector(receptor_chain_id, ligand_chain_id, backbone=False):
+    ligand_chain_selector = f'chain {ligand_chain_id}'
+    receptor_chain_selector = f'chain {receptor_chain_id}'
 
     if backbone:
         ligand_chain_selector += ' and backbone'
@@ -346,7 +346,7 @@ def set_chain_selector(receptor_chain_name, ligand_chain_name, backbone):
 
     return receptor_chain_selector, ligand_chain_selector
 
-def load_and_select(dist, gt_pdb_fn, pred_pdb_fn, chain_names, backbone=False, remove_hydrogen=False):
+def load_and_select(dist, gt_pdb_fn, pred_pdb_fn, chain_ids, backbone=False, remove_hydrogen=False):
     cmd.delete('all')
     cmd.load(gt_pdb_fn, 'native')
     cmd.load(pred_pdb_fn, 'pred')
@@ -356,11 +356,79 @@ def load_and_select(dist, gt_pdb_fn, pred_pdb_fn, chain_names, backbone=False, r
         cmd.remove('hydrogens')
 
     # only deal with dimers
-    assert(len(chain_names) == 2)
+    assert(len(chain_ids) == 2)
+
+    # input processing guarantees first chain is always the receptor chain
+    receptor_chain_selector, ligand_chain_selector = set_chain_selector \
+        (chain_ids[0], chain_ids[1], backbone)
+
+    for obj in ['native','pred']:
+        # select ligand and receptor based on initial assumption
+        cmd.select(f'{obj}_R', f'{obj} and {receptor_chain_selector}')
+        cmd.select(f'{obj}_L', f'{obj} and {ligand_chain_selector}')
+
+        # select receptor interface atoms
+        cmd.select(f'{obj}_L_interface_init', f'byres {obj}_L within {dist} of {obj}_L')
+        cmd.select(f'interface_{obj}', f'{obj}_L_interface_init + byres {obj}_L within {dist} of {obj}_L_interface_init')
+
+        # color receptor interface in yellow
+        cmd.select(f'{obj}_interface_R', f'interface_{obj} and {receptor_chain_selector}')
+        cmd.select(f'{obj}_interface_L', f'interface_{obj} and {ligand_chain_selector}')
+        cmd.color('yellow', f'{obj}_interface_R')
+        cmd.color('blue',f'{obj}_interface_L')
+
+def assign_receptor_ligand_chain(pdb_fn, chain_ids):
+    ''' Assign two chain ids to be either receptor (long) or ligand (short) '''
+    cmd.delete('all')
+    cmd.load(pdb_fn, 'pdb')
+
+    # only deal with dimers
+    assert(len(chain_ids) == 2)
 
     # assume 2nd chain is ligand for now
     receptor_chain_selector, ligand_chain_selector = set_chain_selector \
-        (chain_names[0], chain_names[1], backbone)
+        (chain_ids[0], chain_ids[1])
+
+    # select ligand and receptor based on initial assumption
+    cmd.select(f'pdb_R', f'pdb and {receptor_chain_selector}')
+    cmd.select(f'pdb_L', f'pdb and {ligand_chain_selector}')
+
+    # make sure ligand has more atoms than receptor, otherwise reverse them
+    count_r = cmd.count_atoms(f'pdb_R')
+    count_l = cmd.count_atoms(f'pdb_L')
+    if count_r < count_l:
+        print(f'{pdb_fn[-8:-4]} has receptor and ligand reverted')
+        chain_ids = chain_ids[::-1]
+
+def get_metric_plot_variables(pdb_fn, af_metric_fn, chain_name):
+    ''' Get variables that we will dockq/rmsd value against
+        @Return idr_len, num_interface_resid, plddt, sasa, helix chain
+    '''
+
+    # idr_len
+    resid = read_residue_from_pdb(pdb_fn) # 2nd chain is ligand
+    len_ligand = len(resid[1])
+
+    # num_interface_resid
+
+    #
+
+'''
+def load_and_select(dist, gt_pdb_fn, pred_pdb_fn, chain_ids, backbone=False, remove_hydrogen=False):
+    cmd.delete('all')
+    cmd.load(gt_pdb_fn, 'native')
+    cmd.load(pred_pdb_fn, 'pred')
+
+    # remove hydrogens (presented in af prediction)
+    if remove_hydrogen:
+        cmd.remove('hydrogens')
+
+    # only deal with dimers
+    assert(len(chain_ids) == 2)
+
+    # assume 2nd chain is ligand for now
+    receptor_chain_selector, ligand_chain_selector = set_chain_selector \
+        (chain_ids[0], chain_ids[1], backbone)
 
     for obj in ['native','pred']:
         # select ligand and receptor based on initial assumption
@@ -375,7 +443,7 @@ def load_and_select(dist, gt_pdb_fn, pred_pdb_fn, chain_names, backbone=False, r
             print(f'{gt_pdb_fn[-8:-4]} has receptor and ligand reverted')
             # update selectors
             receptor_chain_selector, ligand_chain_selector = set_chain_selector \
-                (chain_names[1], chain_names[0], backbone)
+                (chain_ids[1], chain_ids[0], backbone)
 
             # redo selection
             cmd.select(f'{obj}_R', f'{obj} and {receptor_chain_selector}')
@@ -390,3 +458,4 @@ def load_and_select(dist, gt_pdb_fn, pred_pdb_fn, chain_names, backbone=False, r
         cmd.select(f'{obj}_interface_L', f'interface_{obj} and {ligand_chain_selector}')
         cmd.color('yellow', f'{obj}_interface_R')
         cmd.color('blue',f'{obj}_interface_L')
+'''
