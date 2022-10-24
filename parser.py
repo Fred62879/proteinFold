@@ -52,6 +52,7 @@ def add_hardcoded_args(config):
 
     config['pred_fn_str'] = 'ranked_0.pdb'
     config['complex_fn_str'] = 'complex.pdb'
+    config['ranking_fn_str'] = 'ranking_debug.json'
     config['removed_linker_fn_str'] = 'ranked_0_removed_linker.pdb'
     config['aligned_fn_str'] = 'ranked_0_removed_linker_aligned.pdb'
 
@@ -105,10 +106,12 @@ def add_path(config):
 
 
 def select_pdb_ids(config):
+    config['pdb_ids'] = ['1CF4']
     #config['pdb_ids'] = ['1C8O','1CF4','1D5S']
     #config['pdb_ids'] = ['2GGV','3H8K','5L0T']
     #config['pdb_ids'] = ['1JMT', '2AFF', '2DOH', '2GP9', '2ZQP', '3HK3', '3M51', '3MN7', '4LX3','6SBA','7BY2','7OY3']
 
+    '''
     fn = config['pdb_ids_fn']
     excld_fn = config['pdb_exclude_fn']
     gpu_done_fn = config['pdb_gpu_done_fn']
@@ -135,7 +138,7 @@ def select_pdb_ids(config):
 
     config['pdb_ids'] = pdb_ids
     print(f'selected proteins {pdb_ids}')
-
+    '''
 
 def parse_args(parser):
     print('=== Parsing ===')

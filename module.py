@@ -62,6 +62,7 @@ class pipeline:
 
         self.rmsd_fn = args.rmsd_fn
         self.pred_fn_str = args.pred_fn_str
+        self.ranking_fn_str = args.ranking_fn_str
         self.complex_fn_str = args.complex_fn_str
         self.aligned_fn_str = args.aligned_fn_str
         self.removed_linker_fn_str = args.removed_linker_fn_str
@@ -79,7 +80,7 @@ class pipeline:
         self.pred_fn_str = args.pred_fn_str
         self.aligned_fn_str = args.aligned_fn_str
 
-    def _init_metric_plotting(self, args):
+    #def _init_metric_plotting(self, args):
 
 
     #######################
@@ -133,11 +134,11 @@ class pipeline:
             fn = join(self.input_pdb_dir, pdb_id + '.pdb')
             utils.prune_pdb_atoms(fn, rnge)
 
-    def plot_metrics(self):
+    #def plot_metrics(self):
 
 
     ''' Below are output processing methods '''
-    def process_output_for_one_pdb(self, pdb_id):
+    def process_output_for_one_pdb(self, pdb_id, chain_id):
         print(f'\r\nProcessing output for {pdb_id}')
         dir = join(self.output_dir, pdb_id + '.fasta')
         if not exists(dir):
@@ -145,6 +146,7 @@ class pipeline:
             return
 
         pred_fn = join(dir, self.pred_fn_str)
+        ranking_fn = join(dir, self.ranking_fn_str)
         gt_pdb_fn = join(self.input_pdb_dir, pdb_id + '.pdb')
         pred_removed_linker_fn = join(dir, self.removed_linker_fn_str)
         complex_fn = join(self.output_dir, pdb_id + '.fasta', self.complex_fn_str)
@@ -160,26 +162,28 @@ class pipeline:
                  pred_removed_linker_fn)
 
         if not self.from_fasta or not self.prune_and_renumber:
-            out_fn = pred_removed_linker_fn
-        else: out_fn = pred_aligned_fn
+            pred_pdb_fn = pred_removed_linker_fn
+        else: pred_pdb_fn = pred_aligned_fn
 
         if self.dockq:
-            dockq_metrics = calc_metrics(out_fn, gt_pdb_fn, self.fnat_path)
+            dockq_metrics = calc_metrics(pred_pdb_fn, gt_pdb_fn, self.fnat_path)
             (irms, Lrms, dockQ) = dockq_metrics['irms'], dockq_metrics['Lrms'], dockq_metrics['dockQ']
             #print(irms, Lrms, dockQ)
             cur_metrics = [pdb_id, irms, Lrms, dockQ]
         else:
             cur_metrics = self.calculate_rmsd \
-                (pdb_id, gt_pdb_fn, out_fn, complex_fn, self.verbose)
+                (pdb_id, gt_pdb_fn, pred_pdb_fn, complex_fn, self.verbose)
             cur_metrics.insert(0, pdb_id)
 
-        variables = utils.get_metric_plot_variables()
+        variables = utils.get_metric_plot_variables(pdb_id, gt_pdb_fn, pred_pdb_fn, complex_fn,
+                                                    ranking_fn, chain_id, self.interface_dist)
+        print(variables)
         cur_metrics = np.append(cur_metrics, variables)
         return cur_metrics
 
     def process_output(self):
         with open(self.chain_names_fn, 'rb') as fp:
-            self.chain_names = pickle.load(fp)
+            self.chain_ids = pickle.load(fp)
 
         with open(self.chain_start_resid_ids_fn, 'rb') as fp:
             self.chain_start_ids = pickle.load(fp)
@@ -190,7 +194,9 @@ class pipeline:
         failed_pdbs = []
         metrics = [self.rmsd_names]
         for pdb_id in self.pdb_ids:
-            #cur_metrics = self.process_output_for_one_pdb(pdb_id)
+            cur_metrics = self.process_output_for_one_pdb(pdb_id, self.chain_ids[pdb_id])
+            metrics.append(cur_metrics)
+            '''
             try:
                 cur_metrics = self.process_output_for_one_pdb(pdb_id)
             except Exception as e:
@@ -198,7 +204,7 @@ class pipeline:
                 print(pdb_id, e)
             else:
                 metrics.append(cur_metrics)
-
+            '''
         utils.write_to_csv(metrics, self.rmsd_fn)
         print('pdbs failed: ', failed_pdbs)
 
@@ -368,9 +374,9 @@ class pipeline:
     def remove_extra_residue_and_renumber(self, pdb_id, aligned_fn, removed_linker_fn, gt_pdb_fn, pred_removed_linker_fn):
         seqs1 = utils.read_residue_from_pdb(removed_linker_fn)
         seqs2 = utils.read_residue_from_pdb(gt_pdb_fn)
-        ranges = utils.find_prune_ranges_all_chains(seqs1, seqs2, self.chain_names[pdb_id])
+        ranges = utils.find_prune_ranges_all_chains(seqs1, seqs2, self.chain_ids[pdb_id])
         utils.prune_renumber_seq_given_ranges(pred_removed_linker_fn, aligned_fn,
-                                              self.chain_names[pdb_id], ranges[0], self.gt_chain_bd_ids[pdb_id])
+                                              self.chain_ids[pdb_id], ranges[0], self.gt_chain_bd_ids[pdb_id])
 
     def calculate_rmsd(self, pdb_id, gt_pdb_fn, pred_pdb_fn, complex_fn, verbose=False):
         ''' Calculate rmsd between gt and pred
@@ -378,19 +384,13 @@ class pipeline:
               assume chain_names[-1] is the target chain (e.g. peptide or idr)
         '''
         rmsds = []
-        utils.load_and_select\
+        utils.load_and_select \
             (self.interface_dist, gt_pdb_fn, pred_pdb_fn,
-             self.chain_names[pdb_id], backbone=self.backbone,
+             self.chain_ids[pdb_id], backbone=self.backbone,
              remove_hydrogen=self.remove_hydrogen)
 
-        # superimpose receptor chains and calculate rmsd for idr
-        super = cmd.super('native_R','pred_R')
-        cmd.color('purple','native_R')
-        cmd.color('yellow','native_L')
-        cmd.color('gray','pred_R')
-        cmd.color('orange','pred_L')
-        cmd.multisave(complex_fn, 'all', format='pdb')
-
+        # superimpose receptor chains and calculate rmsd for ligand
+        utils.superimpose_receptors(complex_fn)
         rmsd = cmd.rms_cur('native_L','pred_L')
         rmsds.append(rmsd)
 

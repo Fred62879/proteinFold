@@ -1,5 +1,6 @@
 
 import csv
+import json
 import Bio.PDB
 import numpy as np
 
@@ -10,8 +11,11 @@ from Bio import SeqIO
 from pymol import cmd
 from Bio.Seq import Seq
 from os.path import join
+from Bio.PDB import PDBParser
 from biopandas.pdb import PandasPdb
 from Bio.SeqRecord import SeqRecord
+from Bio.PDB.SASA import ShrakeRupley
+
 
 def read_line_by_line(fn):
     f = open(fn, 'r')
@@ -36,6 +40,22 @@ def read_fasta(fn):
 def save_fasta(seq, fn, id='0'):
     seq = SeqRecord(Seq(seq),id=id)
     SeqIO.write(seq, fn, 'fasta')
+
+def extract_residue_from_selection(sel):
+    res = []
+    #res = []
+    #def myfunc(resi,resn,name):
+    #    print('%s`%s/%s' % (resn ,resi, name))
+    #myspace = {'myfunc': myfunc}
+    #cmd.iterate(f'{obj}_interface_R','myfunc(resi,resn,name)', space='myspace') #,res.append((resi,resn))
+
+    objs = cmd.get_object_list(sel)
+    for a in range(len(objs)):
+        m1 = cmd.get_model(sel + ' and ' + objs[a])
+        for x in range(len(m1.atom)):
+            if m1.atom[x - 1].resi != m1.atom[x].resi:
+                res.append(m1.atom[x].resn)
+    return res
 
 def count_num_atoms_for_each_residue(pdb_fn, remove_H=True):
     ppdb = PandasPdb()
@@ -347,6 +367,7 @@ def set_chain_selector(receptor_chain_id, ligand_chain_id, backbone=False):
     return receptor_chain_selector, ligand_chain_selector
 
 def load_and_select(dist, gt_pdb_fn, pred_pdb_fn, chain_ids, backbone=False, remove_hydrogen=False):
+    # Load gt and pred pdb files and select receptor, ligand, and interface
     cmd.delete('all')
     cmd.load(gt_pdb_fn, 'native')
     cmd.load(pred_pdb_fn, 'pred')
@@ -367,15 +388,28 @@ def load_and_select(dist, gt_pdb_fn, pred_pdb_fn, chain_ids, backbone=False, rem
         cmd.select(f'{obj}_R', f'{obj} and {receptor_chain_selector}')
         cmd.select(f'{obj}_L', f'{obj} and {ligand_chain_selector}')
 
+        len_r = cmd.count_atoms(f'{obj}_R')
+        len_l = cmd.count_atoms(f'{obj}_L')
+        assert(len_r > len_l)
+
         # select receptor interface atoms
-        cmd.select(f'{obj}_L_interface_init', f'byres {obj}_L within {dist} of {obj}_L')
-        cmd.select(f'interface_{obj}', f'{obj}_L_interface_init + byres {obj}_L within {dist} of {obj}_L_interface_init')
+        cmd.select(f'{obj}_R_interface_init', f'byres {obj}_R within {dist} of {obj}_L')
+        cmd.select(f'interface_{obj}', f'{obj}_R_interface_init + byres {obj}_L within {dist} of {obj}_R_interface_init')
 
         # color receptor interface in yellow
         cmd.select(f'{obj}_interface_R', f'interface_{obj} and {receptor_chain_selector}')
         cmd.select(f'{obj}_interface_L', f'interface_{obj} and {ligand_chain_selector}')
         cmd.color('yellow', f'{obj}_interface_R')
         cmd.color('blue',f'{obj}_interface_L')
+
+def superimpose_receptors(complex_fn):
+    # superimpose receptor chains and calculate rmsd for idr, assume existence of corresp sels
+    super = cmd.super('native_R','pred_R')
+    cmd.color('purple','native_R')
+    cmd.color('yellow','native_L')
+    cmd.color('gray','pred_R')
+    cmd.color('orange','pred_L')
+    cmd.multisave(complex_fn, 'all', format='pdb')
 
 def assign_receptor_ligand_chain(pdb_fn, chain_ids):
     ''' Assign two chain ids to be either receptor (long) or ligand (short) '''
@@ -400,18 +434,41 @@ def assign_receptor_ligand_chain(pdb_fn, chain_ids):
         print(f'{pdb_fn[-8:-4]} has receptor and ligand reverted')
         chain_ids = chain_ids[::-1]
 
-def get_metric_plot_variables(pdb_fn, af_metric_fn, chain_name):
-    ''' Get variables that we will dockq/rmsd value against
+def get_sasa(pdb_id, pdb_fn):
+    # get solvent accessible surface area of given protein
+    p = PDBParser(QUIET=1)
+    struct = p.get_structure(pdb_id, pdb_fn)
+    sr = ShrakeRupley()
+    sr.compute(struct, level="S")
+    return struct.sasa
+
+def get_metric_plot_variables(pdb_id, gt_pdb_fn, pred_pdb_fn, complex_fn, ranking_fn, chain_id, intrfc_dist):
+    ''' Get variables that we will calculate dockq/rmsd value against
         @Return idr_len, num_interface_resid, plddt, sasa, helix chain
     '''
 
-    # idr_len
-    resid = read_residue_from_pdb(pdb_fn) # 2nd chain is ligand
+    load_and_select(intrfc_dist, gt_pdb_fn, pred_pdb_fn, chain_id)
+    superimpose_receptors(complex_fn)
+
+    # len of ligand
+    resid = read_residue_from_pdb(pred_pdb_fn) # 2nd chain is ligand
     len_ligand = len(resid[1])
 
-    # num_interface_resid
+    # num of interface resid for ligand
+    intrfc_resids = extract_residue_from_selection('pred_interface_L')
+    len_intrfc_resid = len(intrfc_resids)
 
-    #
+    # plddt
+    fp = open(ranking_fn)
+    rank = json.load(fp)
+    plddt = rank["plddts"]["model_1_pred_0"]
+
+    # comprehensive sasa: (sasa_r + sasa_l - sasa_super)/2
+    sasa = get_sasa(pdb_id, gt_pdb_fn) + get_sasa(pdb_id, pred_pdb_fn) - get_sasa(pdb_id, complex_fn)
+    sasa /= 2
+
+    return (len_ligand, len_intrfc_resid, plddt, sasa)
+
 
 '''
 def load_and_select(dist, gt_pdb_fn, pred_pdb_fn, chain_ids, backbone=False, remove_hydrogen=False):
