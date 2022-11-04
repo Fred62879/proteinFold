@@ -36,8 +36,8 @@ download() {
   curl -s -f $url -o $out || echo "Failed to download $url"
 }
 
-listfile=""
-outdir="."
+#listfile='../data/input/peptide/ids.txt '
+#outdir='../data/input/peptide/pdbs'
 cif=false
 pdb=false
 pdb1=false
@@ -105,8 +105,10 @@ do
 
 done
 
-# below are self added to unzip and clean up dir
-for f in $outdir/*.gz ; do
-    gunzip $f
-    #rm $f
-done
+
+# untar
+echo $outdir
+gunzip $outdir/*.gz
+
+# rename *.pdb1 to *.pdb
+rename 's/pdb1/pdb/s' $outdir/*.pdb1

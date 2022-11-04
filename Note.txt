@@ -28,8 +28,8 @@ from Bio import SeqIO;from Bio.Seq import Seq;from Bio.SeqRecord import SeqRecor
 
 os.chdir('/media/fred/Local Disk/projects/bioinfo/code')
 
-pdb_fn_0='/media/fred/Local Disk/projects/bioinfo/data/input/ds1/pdbs/1C8O.pdb'
-pdb_fn_1='/media/fred/Local Disk/projects/bioinfo/data/input/ds1/pdbs/1Q5W.pdb'
+pdb_fn0='/media/fred/Local Disk/projects/bioinfo/data/input/ds1/pdbs/1C8O.pdb'
+pdb_fn1='/media/fred/Local Disk/projects/bioinfo/data/input/ds1/pdbs/1Q5W.pdb'
 
 pred_fn0='/media/fred/Local Disk/projects/bioinfo/data/output/ds1_af_full/poly_g_20_fasta/1C8O.fasta/ranked_0_removed_linker_aligned.pdb'
 pred_fn1='/media/fred/Local Disk/projects/bioinfo/data/output/ds1_af_full/poly_g_20_fasta/1Q5W.fasta/ranked_0_removed_linker_aligned.pdb'
@@ -330,3 +330,14 @@ rmsd warning: 1JGN (CRYST1 record)
 - ds1 record
 gpu done
 '7EV8,7JYZ,7LJ0,7LWB,7NDX,7PKU,7QV8,7TGG,7VLJ'
+
+** Oct 30
+*** Wed
+- ds1 record
+7DCP GPU done on narval
+
+*** Thu
+- ds1 record
+7E2H gpu oom on narval
+7P9U, 7VSI gpu done on narval
+all ds1 done

@@ -208,7 +208,7 @@ def assert_selections(receptor_chain, ligand_chain, chain_ref, chain_sample):
         (receptor_chain, len(chain_ref[receptor_chain]), len(chain_sample[receptor_chain]))
 
     assert len(chain_ref[ligand_chain]) != 0 or len(chain_sample[ligand_chain]) != 0, \
-        "Zero number of equivalent atoms in native and model ligand (chain %s) %d %d.\anCheck that the residue numbers in model and native is consistent\n" % \
+        "Zero number of equivalent atoms in native and model ligand (chain %s) %d %d.\d\nCheck that the residue numbers in model and native is consistent\n" % \
         (ligand_chain, len(chain_ref[ligand_chain]), len(chain_sample[ligand_chain]))
 
     assert len(chain_ref[ligand_chain]) == len(chain_sample[ligand_chain]), \
