@@ -83,7 +83,7 @@ def load_and_select(interface_dist, gt_pdb_fn, pred_pdb_fn, chain_ids, backbone=
     iRMS = cmd.align('native_interface_R','pred_interface_R')
     print(LRMS, iRMS)
 
-pdb_id = '5L0T'
+pdb_id = '1XTG'
 interface_dist = 10
 pdb_fn = f'/media/fred/Local Disk/projects/bioinfo/data/input/ds1/pdbs/{pdb_id}.pdb'
 pred_fn = f'/media/fred/Local Disk/projects/bioinfo/data/output/ds1_af_full/poly_g_20_fasta/{pdb_id}.fasta/ranked_0_removed_linker_aligned.pdb'

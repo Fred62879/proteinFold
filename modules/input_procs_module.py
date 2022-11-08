@@ -7,9 +7,7 @@ import numpy as np
 from pymol import cmd
 from functools import reduce
 from os.path import join, exists
-
 from utils import common as utils
-from utils.dockq import calc_metrics
 
 
 class pipeline:
@@ -17,37 +15,43 @@ class pipeline:
         self.verbose = args.verbose
 
         self.n_g = args.n_g
+        self.skip_fasta_download = args.skip_fasta_download
+        self.generate_fasta_from_pdb = args.generate_fasta_from_pdb
+
         self.input_pdb_dir = args.input_pdb_dir
-        self.chain_ids_fn = args.chain_ids_fn
+        self.orig_chain_ids_fn = args.orig_chain_ids_fn
+        self.ordered_chain_ids_fn = args.ordered_chain_ids_fn
         self.chain_start_resid_ids_fn = args.chain_start_resid_ids_fn
         self.gt_chain_bd_resid_ids_fn = args.gt_chain_bd_resid_ids_fn
 
-        if option == 'init_atom_prune':
-            self._init_atom_prune(args)
-        elif option == 'init_input_procs':
+        if option == 'init_input_procs':
             self._init_input_processing(args)
-        elif option == 'init_input_procs_fasta':
-            self._init_input_processing_from_fasta(args)
         elif option == 'init_atom_locating':
             self._init_atom_locating(args)
-        elif option == 'init_metric_plotting':
-            self._init_metric_plotting(args)
+        elif option == 'init_atom_prune':
+            self._init_atom_prune(args)
+        else:
+            raise Exception('= !Unsupported input processing operation!')
 
     ########
     # inits
     def _init_input_processing(self, args):
-        self.download_pdb = args.download_pdb
-        self.pdb_ids_fn = args.pdb_ids_fn
-        self.ds_spec_fn = args.dataset_spec_fn
-        self.linked_fasta_dir = args.linked_fasta_dir
-        self.pdb_download_command = args.pdb_download_command
+        if self.skip_fasta_download: pass
+        elif self.generate_fasta_from_pdb:
+            self.fasta_procs_funs = self.extract_fasta_from_pdb
+        else: self.fasta_procs_func = self.manually_download_fasta
 
-    def _init_input_processing_from_fasta(self, args):
+        self.strategy = args.strategy
         self.download_pdb = args.download_pdb
+        self.renumber = args.prune_and_renumber
+        self.has_dataset_spec = args.has_dataset_spec
+        self.remove_linker = args.strategy == 'poly_g_link'
+
         self.pdb_ids_fn = args.pdb_ids_fn
         self.ds_spec_fn = args.dataset_spec_fn
+        self.input_fasta_dir = args.input_fasta_dir
         self.source_fasta_dir = args.source_fasta_dir
-        self.linked_fasta_dir = args.linked_fasta_dir
+        self.pdb_to_download_fn = args.pdb_to_download_fn
         self.pdb_download_command = args.pdb_download_command
 
     def _init_atom_prune(self, args):
@@ -55,54 +59,41 @@ class pipeline:
         self.atom_prune_ranges = args.atom_prune_ranges
 
     def _init_atom_locating(self, args):
-        self.pdb_ids = args.pdb_ids
-
-        self.from_fasta = args.from_fasta
+        self.generate_fasta_from_pdb = args.generate_fasta_from_pdb
         self.output_dir = args.output_dir
         self.pred_fn_str = args.pred_fn_str
         self.aligned_fn_str = args.aligned_fn_str
 
     #############
     # processors
-    def process_input_base(self):
-        self.parse_dataset_spec()
-        if self.download_pdb:
-            print("= Downloading source pdb")
-            utils.run_bash(self.pdb_download_command)
-        #print("= Downloading source fasta")
-        #utils.run_bash(self.fasta_download_command)
-
-        gt_chain_bd_resid_ids = self.read_bd_resid_id_all()
-        with open(self.gt_chain_bd_resid_ids_fn, 'wb') as fp:
-            pickle.dump(gt_chain_bd_resid_ids, fp)
-
-        # get chain names and store locally
-        #chain_ids = self.read_chain_ids_all()
-        #with open(self.chain_ids_fn, 'wb') as fp:
-        #    pickle.dump(chain_ids, fp)
-
     def process_input(self):
-        self.process_input_base()
-        chain_start_resid_ids = self.generate_fasta_from_pdb()
-        with open(self.chain_start_resid_ids_fn, 'wb') as fp:
-            pickle.dump(chain_start_resid_ids, fp)
+        # If dataset spec file is provided, get pdb ids, chain ids from it
+        # Otherwise, parse manually downloaded data to gather these
+        if self.has_dataset_spec:
+            self.parse_dataset_spec()
+        else: self.parse_manual_data()
 
-    def process_input_from_fasta(self):
-        self.process_input_base()
-        groups = self.parse_to_groups()
-        chain_start_resid_ids = self.poly_g_link_all(groups)
-        with open(self.chain_start_resid_ids_fn, 'wb') as fp:
-            pickle.dump(chain_start_resid_ids, fp)
+        # process fasta files
+        self.fasta_procs_func()
+
+        # use common set of pdb ids presented in pdb & fasta dir as experiment pdb ids
+        self.collect_experiment_pdbs()
+
+        # to remove linker or renumber residue id during output processing
+        # we need id of boundary residue for each chain
+        self.read_bd_resid_ids_all()
+
+        # store original chain ids (order correspd. chain in gt pdb) & ordered chain ids
+        self.read_chain_ids_all()
 
     def locate_extra_atoms(self):
         for pdb_id in self.pdb_ids:
             print(f'{pdb_id} extra atoms: ')
             pdb_fn = join(self.input_pdb_dir, pdb_id + '.pdb')
             dir = join(self.output_dir, pdb_id + '.fasta')
-            if self.from_fasta:
-                pred_fn = join(dir, self.aligned_fn_str)
-            else:
+            if self.generate_fasta_from_pdb:
                 pred_fn = join(dir, self.removed_linker_fn_str)
+            else: pred_fn = join(dir, self.aligned_fn_str)
             ret = utils.find_residue_diff_in_atom_counts(pdb_fn, pred_fn)
             print(ret)
 
@@ -115,108 +106,144 @@ class pipeline:
     ##########
     # helpers
     def parse_dataset_spec(self):
-        # read pdb_ids and correspd chain ids
-        chain_ids, pdb_ids = {}, []
-
+        ordered_chain_ids, pdb_ids = {}, []
         f = open(self.ds_spec_fn)
         data = json.load(f)
         for pdb_id, v in data.items():
             pdb_ids.append(pdb_id)
-            chain_ids[pdb_id] = [v['receptor_chain_ids'][0],
-                                 v['idp_chain_ids'][0]]
-
+            ordered_chain_ids[pdb_id] = [v['receptor_chain_ids'][0],
+                                         v['idp_chain_ids'][0]]
+        with open(self.ordered_chain_ids_fn, 'wb') as fp:
+            pickle.dump(ordered_chain_ids, fp)
         pdb_ids = np.array(pdb_ids)
-        pdb_ids.sort()
-        self.pdb_ids = pdb_ids
-        pdb_id_str = reduce(lambda cur, acc: acc + ',' + cur, pdb_ids, '')
+        self.download_pdbs(pdb_ids)
 
-        # save pdb ids and chain ids
-        # npy file for data processing
-        np.save(self.pdb_ids_fn + '.npy', pdb_ids)
-        # plain txt file for pdb downloading
+        # for fasta downloading
+        pdb_ids_str = reduce(lambda cur, acc: acc + ',' + cur, pdb_ids, '')
         with open(self.pdb_ids_fn + '.txt', 'w') as fp:
-            fp.write(pdb_id_str)
-        with open(self.chain_ids_fn, 'wb') as fp:
-            pickle.dump(chain_ids, fp)
+            fp.write(pdb_ids_str)
 
-    def parse_to_groups(self):
+    def parse_manual_data(self):
+        if self.download_pdb:
+            fn = self.pdb_to_download_fn + '.txt'
+            info = f'= Please provide a plain text file of comma separated pdb ids and store it here {fn}.\r\n'
+            info += '  Press any key to continue when you finish.'
+            input(info)
+            assert(exists(fn))
+            with open(fn) as fp:
+                data = fp.readlines()
+            pdb_ids = np.array(data[0].split(','))
+            self.download_pdbs(pdb_ids)
+        else:
+            pdb_ids = utils.parse_pdb_ids(self.input_pdb_dir, '.pdb')
+
+        # for fasta downloading
+        pdb_ids_str = reduce(lambda cur, acc: acc + ',' + cur, pdb_ids, '')
+        with open(self.pdb_ids_fn + '.txt', 'w') as fp:
+            fp.write(pdb_ids_str)
+
+    def manually_download_fasta(self):
+        ''' Wait for confirmation from user that fasta files are stored in directed folder
+            Provide a plain text file with comma separated pdb ids for ease of downloading
         '''
+        fasta_fn = self.pdb_ids_fn + '.txt'
+        info = f'= Please download fasta files to {self.source_fasta_dir}.\r\n'
+        info += f'  You can use pdb ids provided in {fasta_fn} for downloading.\r\n'
+        info += '  Press any key to continue when you finish.'
+        input(info)
+        assert(exists(self.source_fasta_dir) and
+               len(os.listdir(self.source_fasta_dir)) != 0)
+        if self.strategy == 'poly_g_link':
+            utils.poly_g_link_all(self.strategy, self.source_fasta_dir, self.input_fasta_dir,
+                                  self.chain_start_resid_ids_fn, self.n_g)
+
+    def extract_fasta_from_pdb(self):
+        ''' Generate source fasta based on gt pdb.
+            If poly glycine link strategy is used, also polyg link all
+              chains and record id (1-based continuous between chains with polyg
+              included) of 1st residue for each chain for later linker removal
         '''
-        prev_id = ''
-        cur_group, groups = [], []
+        print('= generating fasta from pdb')
 
-        fns = sorted(os.listdir(self.source_fasta_dir))
-        for fn in fns:
-            cur_id = fn.split('_')[0]
-            if cur_id != prev_id:
-               groups.append(cur_group)
-               cur_group = [fn.split('.')[0]]
-               prev_id = cur_id
-            else:
-               cur_group.append(fn.split('.')[0])
-        groups.append(cur_group)
-        return groups[1:]
-
-    def poly_g_link_all(self, fasta_groups):
-        poly_g = 'G' * self.n_g
-        chain_start_ids = {}
-        for fasta_group in fasta_groups:
-            utils.poly_g_link(self.source_fasta_dir, self.linked_fasta_dir, chain_start_ids, fasta_group, poly_g, self.n_g)
-        return chain_start_ids
-
-    def read_bd_resid_id_all(self):
-        res = {}
-        for id in self.pdb_ids:
-            fn = join(self.input_pdb_dir, id + '.pdb')
-            utils.read_chain_bd_resid_id_from_pdb(fn, id, res)
-        return res
-
-    def read_chain_ids_all(self, gt_model_nm='native'):
-        chain_ids = {}
-        for pdb_id in self.pdb_ids:
-            fn = join(self.input_pdb_dir, pdb_id + '.pdb')
-            chain_id = utils.read_chain_id_from_pdb(fn)
-            chain_id = utils.assign_receptor_ligand(fn, chain_id)
-            chain_ids[pdb_id] = chain_id
-        return chain_ids
-
-    def generate_fasta_from_pdb(self):
-        ''' Generate source fasta based on gt pdb
-              and polyg link all chains
-            Also record residue id (1-based continuous between chains
-              with polyg included) of start of each chain
-        '''
-        linker = 'G' * self.n_g
-        valid_ids = []
-        chain_start_resid_ids = {}
+        if self.strategy == 'poly_g_link':
+            linker = 'G' * self.n_g
+            chain_start_resid_ids = {}
 
         for id in self.pdb_ids:
             in_fn = join(self.input_pdb_dir, id + '.pdb')
             seqs = utils.read_residue_from_pdb(in_fn)
-            fasta = reduce(lambda acc, seq: acc + seq + linker, seqs, '')[:-self.n_g]
-            if 'X' in fasta or 'x' in fasta:
-                continue
 
-            valid_ids.append(id)
-            acc, start_ids = 1, []
-            for seq in seqs:
-                start_ids.append(acc)
-                acc += len(seq) + self.n_g
-            start_ids.append(len(fasta) + self.n_g + 1) # for ease of removal
+            if self.strategy == 'poly_g_link':
+                utils.poly_g_link_pdb(seqs, self.n_g, self.input_fasta_dir, chain_start_resid_ids)
+            else:
+                for i, seq in enumerate(seqs):
+                    out_fn = join(self.input_fasta_dir, id + f'_{i}.fasta')
+                    utils.save_fasta(seq, out_fn)
 
-            out_fn = join(self.linked_fasta_dir, id + '.fasta')
-            utils.save_fasta(fasta, out_fn)
-            chain_start_resid_ids[id] = start_ids
+        if self.strategy == 'poly_g_link':
+            with open(self.chain_start_resid_ids_fn, 'wb') as fp:
+                pickle.dump(chain_start_resid_ids, fp)
 
-        np.save(self.pdb_ids_fn, np.array(valid_ids))
-        return chain_start_resid_ids
+    def collect_experiment_pdbs(self):
+        # gather experiment pdb ids as common ids from pdb and fasta dir
+        pdb_ids = utils.parse_pdb_ids(self.input_pdb_dir, '.pdb')
+        if not self.skip_fasta_download:
+            pdb_ids_1 = utils.parse_pdb_ids(self.input_fasta_dir, '.fasta')
+            pdb_ids = np.array(list(set(pdb_ids).intersection(pdb_ids_1)))
+        np.save(self.pdb_ids_fn + '.npy', pdb_ids)
+        self.pdb_ids = pdb_ids
 
-    def assert_fasta(args):
-        ''' check if aa sequence from processed prediction pdb match sequence from gt pdb
+    def download_pdbs(self, pdb_ids):
+        # download all specified pdbs. If pdb dir exists, only download pdb not presented in the dir
+        pdb_downloaded = utils.parse_pdb_ids(self.input_pdb_dir, '.pdb')
+        pdb_to_download = list(set(pdb_ids) - set(pdb_downloaded))
+
+        # save pdb ids as a str in text file for pdb downloading
+        pdb_to_download_str = reduce(lambda cur, acc: acc + ',' + cur, pdb_to_download, '')
+        with open(self.pdb_to_download_fn + '.txt', 'w') as fp:
+            fp.write(pdb_to_download_str)
+
+        print("= Downloading source pdb")
+        print(f'- {len(pdb_downloaded)} pdbs already downloaded, {len(pdb_to_download)} pdbs to download')
+        utils.run_bash(self.pdb_download_command)
+
+    def read_bd_resid_ids_all(self):
+        # read id of boundary (1st and last) residues of each chain
+        bypass = (not self.remove_linker and not self.renumber) \
+            or exists(self.gt_chain_bd_resid_ids_fn)
+        if bypass: return
+
+        print('= loading boundary residue ids')
+        gt_chain_bd_resid_ids = {}
+        for id in self.pdb_ids:
+            fn = join(self.input_pdb_dir, id + '.pdb')
+            utils.read_chain_bd_resid_id_from_pdb(fn, id, gt_chain_bd_resid_ids)
+        with open(self.gt_chain_bd_resid_ids_fn, 'wb') as fp:
+            pickle.dump(gt_chain_bd_resid_ids, fp)
+
+    def read_chain_ids_all(self):
+        ''' Read chain id (orig order and receptor-ligand order) for each pdb
+            If we have dataset spec file, ordered chain ids are already obtained
+            Otherwise, ordered chain ids are obtained via comparing num of atoms
+              in each chain. Longer chain is receptor (1st), the other is ligand (2nd)
         '''
-        for id in args.pdb_ids:
-            pdb_fn = join(args.input_pdb_dir, id + '.pdb')
-            pred_fn = join(args.output_dir, id + '.fasta', args.pred_fn)
-            seq_1 = utils.read_residue_from_pdb(pdb_fn)
-            seq_2 = utils.read_residue_from_pdb(pred_fn)
-            assert(seq_1 == seq_2)
+        bypass = exists(self.orig_chain_ids_fn) and \
+            exists(self.ordered_chain_ids_fn)
+        if bypass: return
+
+        print('= loading chain ids')
+        orig_chain_ids, ordered_chain_ids = {}, {}
+
+        for pdb_id in self.pdb_ids:
+            fn = join(self.input_pdb_dir, pdb_id + '.pdb')
+            orig_chain_id = utils.read_chain_id_from_pdb(fn)
+            orig_chain_ids[pdb_id] = orig_chain_id
+            if not self.parse_dataset_spec:
+                ordered_chain_id = utils.assign_receptor_ligand(fn, orig_chain_id)
+                ordered_chain_ids[pdb_id] = ordered_chain_id
+
+        with open(self.orig_chain_ids_fn, 'wb') as fp:
+            pickle.dump(orig_chain_ids, fp)
+        if not self.has_dataset_spec:
+            with open(self.ordered_chain_ids_fn, 'wb') as fp:
+                pickle.dump(ordered_chain_ids, fp)

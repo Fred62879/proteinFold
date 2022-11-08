@@ -10,9 +10,10 @@ import matplotlib.pyplot as plt
 
 from Bio import SeqIO
 from pymol import cmd
+from os import listdir
 from Bio.Seq import Seq
-from os.path import join
 from Bio.PDB import PDBParser
+from os.path import join, exists
 from biopandas.pdb import PandasPdb
 from Bio.SeqRecord import SeqRecord
 from Bio.PDB.SASA import ShrakeRupley
@@ -66,6 +67,8 @@ def write_to_csv(data, out_fn):
     #np.savetxt(args.rmsd_fn, np.array(rmsds),delimiter=',',
     #           header=args.rmsd_names,comments='')
 
+################
+# residue procs
 def read_fasta(fn):
     fasta_sequences = SeqIO.parse(open(fn),'fasta')
     for fasta in fasta_sequences:
@@ -159,7 +162,7 @@ def read_chain_id_from_pdb(pdb_fn):
 
 def read_chain_bd_resid_id_from_pdb(pdb_fn, pdb_id, bd_resid_ids):
     ''' Find residue id of two boundary residues in each chain '''
-    print(f'Reading chain boundary residue id for {pdb_id}')
+    #print(f'Reading chain boundary residue id for {pdb_id}')
 
     ppdb = PandasPdb()
     _ = ppdb.read_pdb(pdb_fn)
@@ -194,7 +197,29 @@ def read_chain_bd_resid_id_from_pdb(pdb_fn, pdb_id, bd_resid_ids):
     bd_resid_ids[pdb_id] = cur_bd_resid_ids
     return bd_resid_ids
 
-def poly_g_link(indir, outdir, chain_start_ids, fasta_group, poly_g, n_g):
+def assert_seq_equality(gt_pdb_fn, pred_pdb_fn):
+    # check if sequence from processed prediction pdb match sequence from gt pdb
+    gt_pdb = read_residue_from_pdb(gt_pdb_fn)
+    pred_pdb = read_residue_from_pdb(pred_pdb_fn)
+    if not gt_pdb == pred_pdb:
+        pdb_id = gt_pdb_fn[:4]
+        raise Exception(f'{pdb_id}: prediction and gt pdb sequence don\'t match')
+
+def assert_equal_num_chains(gt_pdb_fn, pred_pdb_fn):
+    gt_pdb = read_residue_from_pdb(gt_pdb_fn)
+    pred_pdb = read_residue_from_pdb(pred_pdb_fn)
+    if not len(gt_pdb) == len(pred_pdb):
+        pdb_id = gt_pdb_fn[:4]
+        raise Exception(f'{pdb_id}: prediction and gt pdb have diff num of chains')
+
+##############
+# fasta procs
+def poly_g_link_fasta(indir, outdir, chain_start_ids, fasta_group, poly_g, n_g):
+    ''' poly glycine link all chains of a given protein where sequence
+          of each chain is downloaded from rcsb.org
+        @Param
+          fasta_group: name of fasta files, each containing one chain of the cur protein
+    '''
     multimer = ''
     cur_chain_start_ids = []
     pdb_id = (fasta_group[0]).split('_')[0]
@@ -212,6 +237,58 @@ def poly_g_link(indir, outdir, chain_start_ids, fasta_group, poly_g, n_g):
     save_fasta(multimer, ofn, id=pdb_id)
     chain_start_ids[pdb_id] = cur_chain_start_ids
 
+def poly_g_link_pdb(seqs, n_g, input_fasta_dir, chain_start_ids):
+    ''' poly glycine link all chains of a given protein where sequence
+          of each chain is obtained from the corspd. pdb file
+    '''
+    fasta = [reduce(lambda acc, seq: acc + seq + linker, seqs, '')[:-n_g]]
+    out_fn = join(input_fasta_dir, id + '.fasta')
+    utils.save_fasta(fasta, out_fn)
+
+    # get id of start residues for each chain
+    acc, start_ids = 1, []
+    for seq in seqs:
+        start_ids.append(acc)
+        acc += len(seq) + n_g
+    start_ids.append(len(fasta) + n_g + 1) # for ease of removal
+    chain_start_ids[id] = start_ids
+
+def combine_source_fasta(source_fasta_dir):
+    # combine fasta files (each contain one chain) to a single fasta file
+    prev_id = ''
+    cur_group, groups = [], []
+
+    fns = sorted(listdir(source_fasta_dir))
+    for fn in fns:
+        cur_id = fn.split('_')[0]
+        if cur_id != prev_id:
+           groups.append(cur_group)
+           cur_group = [fn.split('.')[0]]
+           prev_id = cur_id
+        else:
+           cur_group.append(fn.split('.')[0])
+    groups.append(cur_group)
+    return groups[1:]
+
+def poly_g_link_all(strategy, source_fasta_dir, input_fasta_dir, chain_start_resid_ids_fn, n_g):
+    if exists(chain_start_resid_ids_fn) and exists(input_fasta_dir):
+        pdb_ids1 = parse_pdb_ids(source_fasta_dir, '.fasta')
+        pdb_ids2 = parse_pdb_ids(input_fasta_dir, '.fasta')
+        bypass = set(pdb_ids1) == set(pdb_ids2)
+    else: bypass = False
+    if bypass: return
+
+    fasta_groups = combine_source_fasta(source_fasta_dir)
+    print('= poly g linking fasta')
+    poly_g = 'G' * n_g
+    chain_start_resid_ids = {}
+
+    for fasta_group in fasta_groups:
+        utils.poly_g_link(source_fasta_dir, input_fasta_dir,
+                          chain_start_resid_ids, fasta_group, poly_g, n_g)
+    with open(self.chain_start_resid_ids_fn, 'wb') as fp:
+        pickle.dump(chain_start_resid_ids, fp)
+
 def find_residue_diff_in_atom_counts(fn1, fn2):
     arr1 = count_num_atoms_for_each_residue(fn1, remove_H=True)
     arr2 = count_num_atoms_for_each_residue(fn2, remove_H=True)
@@ -224,6 +301,8 @@ def find_residue_diff_in_atom_counts(fn1, fn2):
         diff.append(cur_chain_diff)
     return diff
 
+#####################
+# prune and renumber
 #def prune_pdb_atoms(pdb_fn, out_fn, ranges):
 def prune_pdb_atoms(pdb_fn, ranges):
     ''' Remove extra atoms from pdb files and renumber atom ids
@@ -274,123 +353,16 @@ def prune_pdb_atoms(pdb_fn, ranges):
     #ppdb.to_pdb(out_fn)
     ppdb.to_pdb(pdb_fn)
 
-def find_subseq_range(seq1, seq2):
-    n, m = len(seq1), len(seq2)
 
-    # assume seq1 has extra residues at head
-    # e.g. seq1: ABCD, seq2: BCD...
-    for i in range(n):
-        if m > n - i:
-            # seq2 has extra residues at tail
-            # e.g. seq1: ABCD, seq2: BCDE
-            if seq1[i:] == seq2[:n-i]:
-                return np.array([[0,i]]), np.array([[n-i,m]])
-        else: # seq1 has extra residues at tail
-            if seq1[i:i+m] == seq2:
-                return np.array([[0,i],[i+m,n]]), []
-
-    # assume seq2 has extra residues at head
-    for i in range(m):
-        if n > m - i:
-            # seq1 has extra residues at tail
-            if seq1[:m-i] == seq2[i:]:
-                return np.array([[m-i,n]]), np.array([[0,i]])
-        else: # seq2 has extra residues at tail
-            if seq2[i:i+n] == seq1:
-                return [], np.array([[0,i],[i+n,m]])
-    raise Exception('cannot find subseq of pred and native that match')
-
-def find_prune_ranges_all_chains(seqs1, seqs2, chain_ids):
-    ''' Find range of residues to prune for each chain of the two sequences
-        which will be identical after pruning.
-        Assume the two sequences differ only in residues at two ends.
-          e.g. seqs1 'BCDE' seqs2 'ABCD' where core residues 'BC' are
-               shared and only residues at the two ends differ.
-        Returned range is residue id (1-based)
-    '''
-    rnge1, rnge2 = [], []
-    acc_len1, acc_len2 = 0, 0
-    for seq1, seq2, chain_id in zip(seqs1, seqs2, chain_ids):
-        cur_rnge1, cur_rnge2 = find_subseq_range(seq1, seq2)
-        if len(cur_rnge1) != 0:
-            rnge1.append(cur_rnge1 + acc_len1)
-        if len(cur_rnge2) != 0:
-            rnge2.append(cur_rnge2 + acc_len2)
-        acc_len1 += len(seq1)
-        acc_len2 += len(seq2)
-    return np.array(rnge1)+1, np.array(rnge2)+1
-
-def prune_renumber_seq_given_range(df, rnge, chain_id, to_remove_atom_ids, renumber_atom_ids, renumber_offsets, prev_hi, acc_offset):
-    ''' Remove atoms falling within residue id lo (inclusive) and hi
-          (exclusive) and renumber to make sure after pruning, residue
-          id goes from 1-n consecutively
-    '''
-
-    (resid_lo,resid_hi) = rnge
-    atom_ids = df[ (df['chain_id'] == chain_id) &
-                   (df['residue_number'] >= resid_lo) &
-                   (df['residue_number'] < resid_hi) ].index
-    to_remove_atom_ids.extend(atom_ids)
-
-    if prev_hi != -1:
-        renumber_range = [prev_hi, resid_lo]
-        renumber_offsets.append(acc_offset)
-
-        # update residue number (1-based)
-        cur_atom_ids = df[ (df['chain_id'] == chain_id) &
-                           (df['residue_number'] >= prev_hi) &
-                           (df['residue_number'] < resid_lo) ].index
-        renumber_atom_ids.append(cur_atom_ids)
-
-    acc_offset += (resid_hi - resid_lo)
-    return resid_hi, acc_offset
-
-def renumber_seq_per_gt(df, chain_ids, gt_chain_bd_ids, renumber_atom_ids, renumber_offsets):
-    for chain_id, gt_chain_bd_id in zip(chain_ids, gt_chain_bd_ids):
-        ids = df.loc[ (df['chain_id'] == chain_id) ].index
-        resid_lo = df.loc[ids[0],'residue_number']
-        offset = resid_lo - gt_chain_bd_id[0]
-        renumber_atom_ids.append(ids)
-        renumber_offsets.append(offset)
-
-def prune_renumber_seq_given_ranges(in_fn, out_fn, chain_ids, ranges, gt_chain_bd_ids):
-    ''' Prune extra residues from predicted pdb so that it match with gt
-        Also renumber residue id to be the same as in gt
-        Only used if aa seq comes from fasta file
-    '''
-    ppdb = PandasPdb()
-    _ = ppdb.read_pdb(in_fn)
-    df = ppdb.df['ATOM']
-
-    prev_hi, acc_offset = -1, 0
-    to_remove_atom_ids = []
-    renumber_atom_ids, renumber_offsets = [], []
-
-    # gather atom ids for extra residues &
-    # atom ids for renumbering with corresponding offset
-    for i, (cur_ranges, chain_id) in enumerate(zip(ranges, chain_ids)):
-        for rnge in cur_ranges:
-            if rnge[0] == rnge[1]:
-                continue
-            prev_hi, acc_offset = prune_renumber_seq_given_range\
-                (df, rnge, chain_id, to_remove_atom_ids, renumber_atom_ids,
-                 renumber_offsets, prev_hi, acc_offset)
-
-    # remove extra residues
-    df.drop(to_remove_atom_ids, axis=0, inplace=True)
-
-    # renumber such that residue id is contiguous (1,2,...n)
-    for ids, renumber_offset in zip(renumber_atom_ids, renumber_offsets):
-        df.loc[ids, 'residue_number'] -= renumber_offset
-
-    # renumber such that residue id match gt
-    renumber_atom_ids, renumber_offsets = [], []
-    renumber_seq_per_gt(df, chain_ids, gt_chain_bd_ids, renumber_atom_ids, renumber_offsets)
-    for ids, renumber_offset in zip(renumber_atom_ids, renumber_offsets):
-        df.loc[ids, 'residue_number'] -= renumber_offset
-
-    ppdb.df['ATOM'] = df
-    ppdb.to_pdb(out_fn)
+#########
+# others
+def parse_pdb_ids(dir, suffix):
+    # collect all unique pdb ids in a given directory
+    #pdb_ids = next(os.walk(dir))[1]
+    pdb_ids = list(set(listdir(dir)))
+    if len(pdb_ids) == 0: return []
+    pdb_ids = [pdb_id[:4] for pdb_id in pdb_ids if suffix in pdb_id]
+    return np.array(list(set(pdb_ids)))
 
 def set_chain_selector(receptor_chain_id, ligand_chain_id, backbone=False):
     ligand_chain_selector = f'chain {ligand_chain_id}'
@@ -402,7 +374,7 @@ def set_chain_selector(receptor_chain_id, ligand_chain_id, backbone=False):
 
     return receptor_chain_selector, ligand_chain_selector
 
-def load_and_select(interface_dist, gt_pdb_fn, pred_pdb_fn, chain_ids, backbone=False, remove_hydrogen=False):
+def load_and_select(interface_dist, gt_pdb_fn, pred_pdb_fn, ordered_chain_ids, backbone=False, remove_hydrogen=False):
     # Load gt and pred pdb files and select receptor, ligand, and interface
     cmd.delete('all')
     cmd.load(gt_pdb_fn, 'native')
@@ -413,11 +385,11 @@ def load_and_select(interface_dist, gt_pdb_fn, pred_pdb_fn, chain_ids, backbone=
         cmd.remove('hydrogens')
 
     # only deal with dimers
-    assert(len(chain_ids) == 2)
+    assert(len(ordered_chain_ids) == 2)
 
     # first chain is receptor
     receptor_chain_selector, ligand_chain_selector = set_chain_selector \
-        (chain_ids[0], chain_ids[1], backbone)
+        (ordered_chain_ids[0], ordered_chain_ids[1], backbone)
 
     for obj in ['native','pred']:
         # select ligand and receptor based on initial assumption
@@ -451,13 +423,13 @@ def assign_receptor_ligand(pdb_fn, chain_ids):
     count_r = cmd.count_atoms(f'native_R')
     count_l = cmd.count_atoms(f'native_L')
     if count_r < count_l:
-        print(f'{pdb_fn[-8:-4]} has receptor and ligand reverted')
+        #print(f'{pdb_fn[-8:-4]} has receptor and ligand reverted')
         (l, r) = chain_ids
         reverted = True
 
     return (r, l, reverted)
 
-def superimpose_receptors(complex_fn):
+def superimpose_receptors():
     # superimpose receptor chains and calculate rmsd for idr, assume existence of corresp sels
     super = cmd.super('native_R','pred_R')
     #cmd.color('purple','native_R')
@@ -474,7 +446,7 @@ def get_sasa(pdb_id, pdb_fn):
     sr.compute(struct, level="S")
     return struct.sasa
 
-def get_metric_plot_variables(pdb_id, gt_pdb_fn, pred_pdb_fn, complex_fn, ranking_fn, chain_ids, intrfc_dist):
+def get_metric_plot_variables(pdb_id, gt_pdb_fn, pred_pdb_fn, ranking_fn, chain_ids, intrfc_dist):
     ''' Get variables that we will calculate dockq/rmsd value against
         @Return idr_len, num_interface_resid, plddt, sasa, helix chain
     '''
@@ -482,7 +454,7 @@ def get_metric_plot_variables(pdb_id, gt_pdb_fn, pred_pdb_fn, complex_fn, rankin
     chain_ids = chain_ids[:-1]
 
     load_and_select(intrfc_dist, gt_pdb_fn, pred_pdb_fn, chain_ids)
-    superimpose_receptors(complex_fn)
+    cmd.super('native_R','pred_R')
 
     # len of ligand
     resid = read_residue_from_pdb(pred_pdb_fn)
