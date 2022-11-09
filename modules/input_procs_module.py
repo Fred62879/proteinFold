@@ -75,7 +75,7 @@ class pipeline:
         else: self.parse_manual_data()
 
         # process fasta files
-        if not self.skip_fasta_download:
+        if not self.skip_fasta_download or self.strategy == 'poly_g_link':
             self.fasta_procs_func()
 
         # use common set of pdb ids presented in pdb & fasta dir as experiment pdb ids
@@ -244,7 +244,7 @@ class pipeline:
             fn = join(self.input_pdb_dir, pdb_id + '.pdb')
             orig_chain_id = utils.read_chain_id_from_pdb(fn)
             orig_chain_ids[pdb_id] = orig_chain_id
-            if not self.parse_dataset_spec:
+            if not self.has_dataset_spec:
                 ordered_chain_id = utils.assign_receptor_ligand(fn, orig_chain_id)
                 ordered_chain_ids[pdb_id] = ordered_chain_id
 

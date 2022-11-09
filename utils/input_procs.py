@@ -54,6 +54,7 @@ def combine_source_fasta(source_fasta_dir):
 
     fns = sorted(listdir(source_fasta_dir))
     for fn in fns:
+        if '.fasta' not in fn: continue
         cur_id = fn.split('_')[0]
         if cur_id != prev_id:
            groups.append(cur_group)

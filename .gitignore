@@ -2,12 +2,4 @@
 *~
 *pse
 
-alphafold/
-parafold/
-dmasif/
-masif/
-interview/
-peptide/
-
-**/sample_data/**
 **/__pycache__/**
