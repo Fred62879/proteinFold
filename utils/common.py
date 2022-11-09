@@ -28,6 +28,12 @@ def read_csv(fn):
     lines = f.readlines()
     return [line.strip() for line in lines]
 
+def write_to_csv(data, out_fn):
+    with open(out_fn, 'w', newline='') as fp:
+        writer = csv.writer(fp)
+        for row in data:
+            writer.writerow(row)
+
 def parse_csv(fn):
     pdb_ids, res = [], {}
     data = read_csv(fn)
@@ -42,33 +48,6 @@ def parse_csv(fn):
         res[pdb_id] = cur_data
     return pdb_ids, metric_names, res
 
-def plot_scatter(dir, data, pdb_ids):
-    stat_names = ['idr_len','num_interface_resid','plddt','sasa']
-    metric = []
-    for pdb_id in pdb_ids:
-        metric.append(data[pdb_id]['dockQ'])
-
-    for stat_name in stat_names:
-        cur_stat = []
-        for pdb_id in pdb_ids:
-            cur_stat.append(data[pdb_id][stat_name])
-
-        plt.scatter(cur_stat, metric)
-        plt.xlabel(stat_name)
-        plt.ylabel('dockQ')
-        plt.savefig(join(dir, stat_name + '.png'))
-        plt.close()
-
-def write_to_csv(data, out_fn):
-    with open(out_fn, 'w', newline='') as fp:
-        writer = csv.writer(fp)
-        for row in data:
-            writer.writerow(row)
-    #np.savetxt(args.rmsd_fn, np.array(rmsds),delimiter=',',
-    #           header=args.rmsd_names,comments='')
-
-################
-# residue procs
 def read_fasta(fn):
     fasta_sequences = SeqIO.parse(open(fn),'fasta')
     for fasta in fasta_sequences:
@@ -82,12 +61,10 @@ def save_fasta(seq, fn, id='0'):
 
 def extract_residue_from_selection(sel):
     res = []
-    #res = []
     #def myfunc(resi,resn,name):
     #    print('%s`%s/%s' % (resn ,resi, name))
     #myspace = {'myfunc': myfunc}
     #cmd.iterate(f'{obj}_interface_R','myfunc(resi,resn,name)', space='myspace') #,res.append((resi,resn))
-
     objs = cmd.get_object_list(sel)
     for a in range(len(objs)):
         m1 = cmd.get_model(sel + ' and ' + objs[a])
@@ -122,11 +99,13 @@ def count_num_atoms_for_each_residue(pdb_fn, remove_H=True):
     return num_atoms
 
 def read_residue_from_pdb(fn):
+    seq = []
     pdb_parser = PDBParser(QUIET = True)
     structure = pdb_parser.get_structure("model", fn)
-
-    seq = []
-    d3to1 = {'CYS': 'C', 'ASP': 'D', 'SER': 'S', 'GLN': 'Q', 'LYS': 'K','ILE': 'I', 'PRO': 'P', 'THR': 'T', 'PHE': 'F', 'ASN': 'N','GLY': 'G', 'HIS': 'H','LEU': 'L', 'ARG': 'R', 'TRP': 'W','ALA': 'A', 'VAL':'V', 'GLU': 'E', 'TYR': 'Y', 'MET': 'M'}
+    d3to1 = {'CYS': 'C', 'ASP': 'D', 'SER': 'S', 'GLN': 'Q', 'LYS': 'K',
+             'ILE': 'I', 'PRO': 'P', 'THR': 'T', 'PHE': 'F', 'ASN': 'N',
+             'GLY': 'G', 'HIS': 'H', 'LEU': 'L', 'ARG': 'R', 'TRP': 'W',
+             'ALA': 'A', 'VAL': 'V', 'GLU': 'E', 'TYR': 'Y', 'MET': 'M'}
     for chain in structure[0]:
         cur_seq = ''
         for residue in chain:
@@ -141,7 +120,6 @@ def read_residue_id_from_pdb(pdb_fn):
     ppdb = PandasPdb()
     _ = ppdb.read_pdb(pdb_fn)
     df = ppdb.df['ATOM']
-
     resid_ids = []
     chain_ids = read_chain_id_from_pdb(pdb_fn)
     for chain_id in chain_ids:
@@ -150,7 +128,6 @@ def read_residue_id_from_pdb(pdb_fn):
         lo, hi = dup_resid_ids[0], dup_resid_ids[-1]
         de_dup_resid_ids = list(np.arange(lo,hi+1))
         resid_ids.extend(de_dup_resid_ids)
-
     return resid_ids
 
 def read_chain_id_from_pdb(pdb_fn):
@@ -161,9 +138,7 @@ def read_chain_id_from_pdb(pdb_fn):
     return list(dict.fromkeys(df.loc[:,'chain_id']))
 
 def read_chain_bd_resid_id_from_pdb(pdb_fn, pdb_id, bd_resid_ids):
-    ''' Find residue id of two boundary residues in each chain '''
-    #print(f'Reading chain boundary residue id for {pdb_id}')
-
+    ''' find residue id of two boundary residues in each chain '''
     ppdb = PandasPdb()
     _ = ppdb.read_pdb(pdb_fn)
     df = ppdb.df['ATOM']
@@ -175,23 +150,6 @@ def read_chain_bd_resid_id_from_pdb(pdb_fn, pdb_id, bd_resid_ids):
         cur_chain_atom_ids = df['chain_id'] == chain_id
         dup_resid_ids = list(df.loc[cur_chain_atom_ids,'residue_number'])
         resid_lo, resid_hi = dup_resid_ids[0], dup_resid_ids[-1]
-
-        '''
-        # to keep resid id for hetatm
-        cur_chain_htm_atom_ids =dfh['chain_id'] == chain_id
-        if len(cur_chain_htm_atom_ids) != 0:
-            dup_resid_ids = list(dfh.loc[cur_chain_htm_atom_ids,'residue_number'])
-            if len(dup_resid_ids) != 0:
-                htm_resid_lo, htm_resid_hi = dup_resid_ids[0], dup_resid_ids[-1]
-                print(resid_lo, resid_hi, htm_resid_lo, htm_resid_hi)
-                if resid_lo > htm_resid_lo:
-                    print('HETATOM lower')
-                if resid_hi < htm_resid_hi:
-                    print('HETATOM higher')
-                resid_lo = min(resid_lo, htm_resid_lo)
-                resid_hi = max(resid_hi, htm_resid_hi)
-        '''
-
         cur_bd_resid_ids.append([resid_lo, resid_hi])
 
     bd_resid_ids[pdb_id] = cur_bd_resid_ids
@@ -212,83 +170,6 @@ def assert_equal_num_chains(gt_pdb_fn, pred_pdb_fn):
         pdb_id = gt_pdb_fn[:4]
         raise Exception(f'{pdb_id}: prediction and gt pdb have diff num of chains')
 
-##############
-# fasta procs
-def poly_g_link_fasta(indir, outdir, chain_start_ids, fasta_group, poly_g, n_g):
-    ''' poly glycine link all chains of a given protein where sequence
-          of each chain is downloaded from rcsb.org
-        @Param
-          fasta_group: name of fasta files, each containing one chain of the cur protein
-    '''
-    multimer = ''
-    cur_chain_start_ids = []
-    pdb_id = (fasta_group[0]).split('_')[0]
-
-    for fn in fasta_group:
-        monomer = read_fasta(join(indir, fn + '.fasta'))
-        cur_chain_start_ids.append(len(multimer)+1) # 1-based
-        multimer += monomer + poly_g
-
-    # add last start_id for convenience of polyg removal (for loop)
-    cur_chain_start_ids.append(len(multimer) + 1) # resid id 1-based
-    multimer = multimer[:-n_g]
-
-    ofn = join(outdir, pdb_id + '.fasta')
-    save_fasta(multimer, ofn, id=pdb_id)
-    chain_start_ids[pdb_id] = cur_chain_start_ids
-
-def poly_g_link_pdb(seqs, n_g, input_fasta_dir, chain_start_ids):
-    ''' poly glycine link all chains of a given protein where sequence
-          of each chain is obtained from the corspd. pdb file
-    '''
-    fasta = [reduce(lambda acc, seq: acc + seq + linker, seqs, '')[:-n_g]]
-    out_fn = join(input_fasta_dir, id + '.fasta')
-    utils.save_fasta(fasta, out_fn)
-
-    # get id of start residues for each chain
-    acc, start_ids = 1, []
-    for seq in seqs:
-        start_ids.append(acc)
-        acc += len(seq) + n_g
-    start_ids.append(len(fasta) + n_g + 1) # for ease of removal
-    chain_start_ids[id] = start_ids
-
-def combine_source_fasta(source_fasta_dir):
-    # combine fasta files (each contain one chain) to a single fasta file
-    prev_id = ''
-    cur_group, groups = [], []
-
-    fns = sorted(listdir(source_fasta_dir))
-    for fn in fns:
-        cur_id = fn.split('_')[0]
-        if cur_id != prev_id:
-           groups.append(cur_group)
-           cur_group = [fn.split('.')[0]]
-           prev_id = cur_id
-        else:
-           cur_group.append(fn.split('.')[0])
-    groups.append(cur_group)
-    return groups[1:]
-
-def poly_g_link_all(strategy, source_fasta_dir, input_fasta_dir, chain_start_resid_ids_fn, n_g):
-    if exists(chain_start_resid_ids_fn) and exists(input_fasta_dir):
-        pdb_ids1 = parse_pdb_ids(source_fasta_dir, '.fasta')
-        pdb_ids2 = parse_pdb_ids(input_fasta_dir, '.fasta')
-        bypass = set(pdb_ids1) == set(pdb_ids2)
-    else: bypass = False
-    if bypass: return
-
-    fasta_groups = combine_source_fasta(source_fasta_dir)
-    print('= poly g linking fasta')
-    poly_g = 'G' * n_g
-    chain_start_resid_ids = {}
-
-    for fasta_group in fasta_groups:
-        utils.poly_g_link(source_fasta_dir, input_fasta_dir,
-                          chain_start_resid_ids, fasta_group, poly_g, n_g)
-    with open(self.chain_start_resid_ids_fn, 'wb') as fp:
-        pickle.dump(chain_start_resid_ids, fp)
-
 def find_residue_diff_in_atom_counts(fn1, fn2):
     arr1 = count_num_atoms_for_each_residue(fn1, remove_H=True)
     arr2 = count_num_atoms_for_each_residue(fn2, remove_H=True)
@@ -301,65 +182,9 @@ def find_residue_diff_in_atom_counts(fn1, fn2):
         diff.append(cur_chain_diff)
     return diff
 
-#####################
-# prune and renumber
-#def prune_pdb_atoms(pdb_fn, out_fn, ranges):
-def prune_pdb_atoms(pdb_fn, ranges):
-    ''' Remove extra atoms from pdb files and renumber atom ids
-        @Param
-          ranges (upper exclusive)
-    '''
-    ppdb = PandasPdb()
-    _ = ppdb.read_pdb(pdb_fn)
-    df = ppdb.df['ATOM']
-
-    # offset between atom id and dataframe id
-    # increment by 1 after each chain
-    atom_offset = 0
-
-    id_lo, acc_len = 0, 0
-    to_remove_atom_ids = []
-    acc_lens, decrmt_rnge = [], []
-
-    # gather ranges of atoms to delete and to decrement with id
-    for i, cur_chain_ranges in enumerate(ranges):
-        for rnge in cur_chain_ranges:
-            (lo, hi) = rnge
-            ids = list(np.arange(lo-atom_offset, hi+1-atom_offset))
-            to_remove_atom_ids.extend(ids)
-
-            # update range of atoms that are kept
-            decrmt_rnge.append([id_lo, lo - 1]) #-acc_len
-            id_lo = lo #-acc_len
-
-            # update acc_len
-            acc_lens.append(acc_len)
-            acc_len += hi - lo + 1
-        atom_offset += 1
-
-    acc_lens.append(acc_len)
-    decrmt_rnge.append([id_lo, len(df)-1])
-
-    # drop atoms
-    df.drop(to_remove_atom_ids, axis=0, inplace=True)
-
-    # decrement atoms
-    for i, (length, rnge) in enumerate(zip(acc_lens, decrmt_rnge)):
-        lo, hi = rnge
-        #print(lo, hi, length)
-        df.loc[lo:hi,'atom_number'] -= length # upper inclusive
-
-    ppdb.df['ATOM'] = df
-    #ppdb.to_pdb(out_fn)
-    ppdb.to_pdb(pdb_fn)
-
-
-#########
-# others
 def parse_pdb_ids(dir, suffix):
     # collect all unique pdb ids in a given directory
-    #pdb_ids = next(os.walk(dir))[1]
-    pdb_ids = list(set(listdir(dir)))
+    pdb_ids = list(set(listdir(dir))) #next(os.walk(dir))[1]
     if len(pdb_ids) == 0: return []
     pdb_ids = [pdb_id[:4] for pdb_id in pdb_ids if suffix in pdb_id]
     return np.array(list(set(pdb_ids)))
@@ -367,11 +192,9 @@ def parse_pdb_ids(dir, suffix):
 def set_chain_selector(receptor_chain_id, ligand_chain_id, backbone=False):
     ligand_chain_selector = f'chain {ligand_chain_id}'
     receptor_chain_selector = f'chain {receptor_chain_id}'
-
     if backbone:
         ligand_chain_selector += ' and backbone'
         receptor_chain_selector += ' and backbone'
-
     return receptor_chain_selector, ligand_chain_selector
 
 def load_and_select(interface_dist, gt_pdb_fn, pred_pdb_fn, ordered_chain_ids, backbone=False, remove_hydrogen=False):
@@ -426,18 +249,14 @@ def assign_receptor_ligand(pdb_fn, chain_ids):
         #print(f'{pdb_fn[-8:-4]} has receptor and ligand reverted')
         (l, r) = chain_ids
         reverted = True
-
     return (r, l, reverted)
 
 def superimpose_receptors():
     # superimpose receptor chains and calculate rmsd for idr, assume existence of corresp sels
     super = cmd.super('native_R','pred_R')
-    #cmd.color('purple','native_R')
-    #cmd.color('yellow','native_L')
-    #cmd.color('gray','pred_R')
-    #cmd.color('orange','pred_L')
-    #cmd.multisave(complex_fn, 'all', format='pdb')
 
+#########
+# metric
 def get_sasa(pdb_id, pdb_fn):
     # get solvent accessible surface area of given protein
     p = PDBParser(QUIET=1)
@@ -477,3 +296,20 @@ def get_metric_plot_variables(pdb_id, gt_pdb_fn, pred_pdb_fn, ranking_fn, chain_
     #sasa /= 2
     sasa = 0
     return (len_ligand, len_intrfc_resid, plddt, sasa)
+
+def plot_scatter(dir, data, pdb_ids):
+    stat_names = ['idr_len','num_interface_resid','plddt','sasa']
+    metric = []
+    for pdb_id in pdb_ids:
+        metric.append(data[pdb_id]['dockQ'])
+
+    for stat_name in stat_names:
+        cur_stat = []
+        for pdb_id in pdb_ids:
+            cur_stat.append(data[pdb_id][stat_name])
+
+        plt.scatter(cur_stat, metric)
+        plt.xlabel(stat_name)
+        plt.ylabel('dockQ')
+        plt.savefig(join(dir, stat_name + '.png'))
+        plt.close()

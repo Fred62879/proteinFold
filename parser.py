@@ -67,6 +67,8 @@ def add_hardcoded_args(config):
 
     if config['strategy'] == 'poly_g_link':
         config['input_fasta_dir_str'] = 'poly_g_' + str(config['n_g'])
+        config['output_dir_str'] = config['input_fasta_dir_str']
+    else: config['output_dir_str'] = config['strategy']
 
     if config['generate_fasta_from_pdb']:
         config['input_fasta_dir_str'] += '_from_pdb'
@@ -112,7 +114,7 @@ def add_path(config):
     config['input_pdb_dir'] = join(input_ds_dir, config['pdb_str'])
     config['source_fasta_dir'] = join(input_ds_dir, config['source_fasta_dir_str'])
     config['output_dir'] = join(config['data_dir'], config['output_str'], config['dataset_name'] +
-                                '_' + config['model_name'], config['input_fasta_dir_str'])
+                                '_' + config['model_name'], config['output_dir_str'])
 
     if config['strategy'] == 'multimer':
         config['input_fasta_dir'] = config['source_fasta_dir']

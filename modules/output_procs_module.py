@@ -91,12 +91,14 @@ class pipeline:
         excld_fn = self.pdb_exclude_fn
         gpu_done_fn = self.pdb_gpu_done_fn
 
+        pdb_ids = utils.parse_pdb_ids(self.output_dir, '.fasta')
+        '''
         if exists(gpu_done_fn):
             pdb_ids = np.load(gpu_done_fn)
         else:
             pdb_ids = utils.parse_pdb_ids(self.output_dir, '.fasta')
             #pdb_ids = np.random.choice(all_pdb_ids, self.n_seqs, replace=False)
-
+        '''
         if exists(excld_fn):
             exclude_ids = np.load(excld_fn)
             pdb_ids = np.array(list( set(pdb_ids) - set(exclude_ids) ))

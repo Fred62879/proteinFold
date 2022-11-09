@@ -3,11 +3,12 @@ import os
 import json
 import pickle
 import numpy as np
+import utils.common as utils
+import utils.input_procs as iutils
 
 from pymol import cmd
 from functools import reduce
 from os.path import join, exists
-from utils import common as utils
 
 
 class pipeline:
@@ -36,14 +37,14 @@ class pipeline:
     ########
     # inits
     def _init_input_processing(self, args):
-        if self.skip_fasta_download: pass
-        elif self.generate_fasta_from_pdb:
-            self.fasta_procs_funs = self.extract_fasta_from_pdb
+        if self.generate_fasta_from_pdb:
+            self.fasta_procs_func = self.extract_fasta_from_pdb
         else: self.fasta_procs_func = self.manually_download_fasta
 
         self.strategy = args.strategy
         self.download_pdb = args.download_pdb
-        self.renumber = args.prune_and_renumber
+        self.renumber = args.renumber_residues
+        self.prune = args.prune_extra_residues
         self.has_dataset_spec = args.has_dataset_spec
         self.remove_linker = args.strategy == 'poly_g_link'
 
@@ -74,7 +75,8 @@ class pipeline:
         else: self.parse_manual_data()
 
         # process fasta files
-        self.fasta_procs_func()
+        if not self.skip_fasta_download:
+            self.fasta_procs_func()
 
         # use common set of pdb ids presented in pdb & fasta dir as experiment pdb ids
         self.collect_experiment_pdbs()
@@ -101,7 +103,7 @@ class pipeline:
         ''' prune_pdb_ids and prune_ranges are hardcoded in parser.py '''
         for pdb_id, rnge in zip(self.prune_pdb_ids, self.atom_prune_ranges):
             fn = join(self.input_pdb_dir, pdb_id + '.pdb')
-            utils.prune_pdb_atoms(fn, rnge)
+            iutils.prune_pdb_atoms(fn, rnge)
 
     ##########
     # helpers
@@ -119,7 +121,8 @@ class pipeline:
         self.download_pdbs(pdb_ids)
 
         # for fasta downloading
-        pdb_ids_str = reduce(lambda cur, acc: acc + ',' + cur, pdb_ids, '')
+        pdb_ids.sort()
+        pdb_ids_str = reduce(lambda acc, cur: acc + ',' + cur, pdb_ids, '')
         with open(self.pdb_ids_fn + '.txt', 'w') as fp:
             fp.write(pdb_ids_str)
 
@@ -138,7 +141,8 @@ class pipeline:
             pdb_ids = utils.parse_pdb_ids(self.input_pdb_dir, '.pdb')
 
         # for fasta downloading
-        pdb_ids_str = reduce(lambda cur, acc: acc + ',' + cur, pdb_ids, '')
+        pdb_ids.sort()
+        pdb_ids_str = reduce(lambda acc, cur: acc + ',' + cur, pdb_ids, '')
         with open(self.pdb_ids_fn + '.txt', 'w') as fp:
             fp.write(pdb_ids_str)
 
@@ -154,7 +158,7 @@ class pipeline:
         assert(exists(self.source_fasta_dir) and
                len(os.listdir(self.source_fasta_dir)) != 0)
         if self.strategy == 'poly_g_link':
-            utils.poly_g_link_all(self.strategy, self.source_fasta_dir, self.input_fasta_dir,
+            iutils.poly_g_link_all(self.strategy, self.source_fasta_dir, self.input_fasta_dir,
                                   self.chain_start_resid_ids_fn, self.n_g)
 
     def extract_fasta_from_pdb(self):
@@ -190,16 +194,18 @@ class pipeline:
         if not self.skip_fasta_download:
             pdb_ids_1 = utils.parse_pdb_ids(self.input_fasta_dir, '.fasta')
             pdb_ids = np.array(list(set(pdb_ids).intersection(pdb_ids_1)))
+        pdb_ids.sort()
         np.save(self.pdb_ids_fn + '.npy', pdb_ids)
         self.pdb_ids = pdb_ids
 
     def download_pdbs(self, pdb_ids):
         # download all specified pdbs. If pdb dir exists, only download pdb not presented in the dir
         pdb_downloaded = utils.parse_pdb_ids(self.input_pdb_dir, '.pdb')
-        pdb_to_download = list(set(pdb_ids) - set(pdb_downloaded))
+        pdb_to_download = np.array(list(set(pdb_ids) - set(pdb_downloaded)))
+        pdb_to_download.sort()
 
         # save pdb ids as a str in text file for pdb downloading
-        pdb_to_download_str = reduce(lambda cur, acc: acc + ',' + cur, pdb_to_download, '')
+        pdb_to_download_str = reduce(lambda acc, cur: acc + ',' + cur, pdb_to_download, '')
         with open(self.pdb_to_download_fn + '.txt', 'w') as fp:
             fp.write(pdb_to_download_str)
 
@@ -209,7 +215,7 @@ class pipeline:
 
     def read_bd_resid_ids_all(self):
         # read id of boundary (1st and last) residues of each chain
-        bypass = (not self.remove_linker and not self.renumber) \
+        bypass = (not self.remove_linker and not self.renumber and not self.prune) \
             or exists(self.gt_chain_bd_resid_ids_fn)
         if bypass: return
 
