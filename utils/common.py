@@ -289,7 +289,8 @@ def get_metric_plot_variables(pdb_id, gt_pdb_fn, pred_pdb_fn, ranking_fn, chain_
     # plddt
     fp = open(ranking_fn)
     rank = json.load(fp)
-    plddt = rank["plddts"]["model_1_pred_0"]
+    best_model_id = rank['order'][0]
+    plddt = rank['plddts'][best_model_id]
 
     # comprehensive sasa: (sasa_r + sasa_l - sasa_super)/2
     #sasa = get_sasa(pdb_id, gt_pdb_fn) + get_sasa(pdb_id, pred_pdb_fn) - get_sasa(pdb_id, complex_fn)
