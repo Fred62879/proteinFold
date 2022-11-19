@@ -1,17 +1,21 @@
 #!/bin/bash
 
-server=graham
-ds=ds2
-seqs=(5NCU 2QME 2FOM 4IF6 1GL0 4UX6 4FDD 2HKQ 2APO 2RVQ 2F91 3O40 2XPP 3O43 4GF3 3B0Z 2F31 2BZW 2VDA 5GNA 3MP7 3PLV 2C5I 5WUJ 1WDG 5WRV 1B0N 3UE5 2L27 1P4Q 2NNU 2MLZ 2LE8 1MIU 5NQF 3S1B 1MZW 1M46 3ZGA 2MNJ 3FDL 5IKJ 2BB3 2L9S 2VOH 5F5S 2XJY 4DZU 2KXW 1SYQ 2N4Q 2KXQ 1WKW 5CHL 2RIV 1O9A 5OWU 4JHK 2K9U 1SGH 3O42 1SP4 3PLX 2RAW 3C0T 2RR3 1MTP 1Y43 3GME 2MLX 2YLE 5IXD 1A2X 3EAR 2N01 5GK9 5U4K 2LFW 2LYD 1UHD 2K2I 1YYP 1ETR 2M8S 5ABX 2JXC 1HLE 5VMO 1JDH 6F9S 2Y0M 3DBO 2L2I 3E5A 4DZV 5F74 5YI8 2LPB 2KT5 1MQS 2A7U 2VU8 3ZLD 4IKA 2RQW 5XIU 2L1C 5H65 9PAI 1G0Y 5JW9 4D2L 1H8B 3N00 2KWK 3FII 1MCT 3QRX 2V6X 2DYO 3ZWZ 5YAH 4D0G 2L53 6F9W 3AJB 1MK2 5FCG 2XBX 4ZRL 2MFQ 1QGK 3AU4 1RF3 5CUL 3TZ1 3GP2 2LXM 2L8T 1BH8 2FID 5H7Y 4BRU 3KL4 1VC3 2LUH 3BTP 1MCV 2L9B 2RDD 2IPP 4CXF 2BTC 4DXR 2L1W 5WN9 1HTR 1SC5 2HQW 2YBF 3NDF 5KIY 2LI5 2CO4 4C5H 4CLQ 4NUT 1QTX 1S6C 5GTB 2GDC)
+upload_data=false
+server_to_server=true
+download_input=false
+download_output=false
 
-local_data_dir="../../data"
-#local_data_dir="/media/fred/Local Disk/Projects/bioinfo/data"
-cc_data_dir="fred862@${server}.computecanada.ca:~/scratch/fred862/data/bioinfo"
+ds=$1
+server=graham
+to_server=narval
+#seqs=(1MIU 1MQS 1QGK 2RDD 2VDA 3AU4 3BTP 3GME 4C5H 4FDD 4H1W 4IKA 4U4C 5IKJ 5IXD 5OWU)
+#seqs=(1K9O 3HM6 4PJU 4TSH 4XDN 5BWD 5MZ6 5U1T 5V8K 5YVW 5YVY 6BWB 6KBM 6LRY 6OF7 6RM9 6SH6 6XMU 7E2H 7P9U 7PP2 7SR9 7VSI)
+seqs=(3HM6 4FZ1 6KBM 6OF7 6XMU 7DCP 7E2H 7MVY 7P9U 7PP2 7TYR 7VSI)
+
 
 #############
 #upload data
 #############
-upload_data=false
 
 if $upload_data; then
     exps=(idr/polg_g_20)
@@ -26,14 +30,47 @@ if $upload_data; then
     scp $local_dir $cc_dir
 fi
 
+
+###################
+# server to server
+###################
+
+if $server_to_server; then
+    local_dir="/home/fred862/scratch/fred862/data/bioinfo/output"
+    out_server_dir="fred862@${to_server}.computecanada.ca:~/scratch/fred862/data/bioinfo/output"
+
+    exps=("${ds}_af_full/poly_g_20")
+    for exp in ${exps[@]}
+    do
+	cd "${local_dir}/${exp}"
+	to_zip="to_zip"
+	mkdir $to_zip
+
+	for seq in ${seqs[@]}
+	do
+	    echo $seq
+	    local_pdb_dir="${seq^^}.fasta"
+	    find $local_pdb_dir -name 'features.pkl' -exec cp --parents \{\} /target \;
+	    cp --parent "${local_pdb_dir}/features.pkl" $to_zip/
+	done
+
+	zip -r "${to_zip}.zip" "${to_zip}/"
+	out_pdb_dir="${out_server_dir}/${exp}"
+	scp "${to_zip}.zip" $out_pdb_dir
+    done
+fi
+
 #################
 # download input
 #################
-download_input=false
-
-cc_input_dir="${cc_data_dir}/input/seq_to_pred"
 
 if $download_input; then
+    cc_data_dir="fred862@${server}.computecanada.ca:~/scratch/fred862/data/bioinfo"
+    local_data_dir="../../data"
+    #local_data_dir="/media/fred/Local Disk/Projects/bioinfo/data"
+
+    cc_input_dir="${cc_data_dir}/input/seq_to_pred"
+
     for exp in ${exps[@]}
     do
         cur_local_data_dir="${local_data_dir}/input/${exp}"
@@ -55,34 +92,38 @@ fi
 ##################
 # download output
 ##################
-download_files=true
 
-exps=(${ds}_af_full/poly_g_20_fasta)
+if $download_output ; then
+    cc_data_dir="fred862@${server}.computecanada.ca:~/scratch/fred862/data/bioinfo"
+    local_data_dir="../../data"
+    #local_data_dir="/media/fred/Local Disk/Projects/bioinfo/data"
 
-cc_output_dir="${cc_data_dir}/output"
-local_output_dir="${local_data_dir}/output"
-
-if [ ! -d $local_output_dir ]
-then
-    mkdir -p $local_output_dir
-fi
-
-for exp in ${exps[@]}
-do
-    for seq in ${seqs[@]}
+    for exp in ${exps[@]}
     do
-        echo $seq
-        local_pdb_dir="${local_output_dir}/${exp}/${seq^^}.fasta"
-        if [ ! -d $local_pdb_dir ] ; then
-            mkdir -p $local_pdb_dir
-        fi
+	exps=(${ds}_af_full/poly_g_20_fasta)
 
-        if $download_files ; then
-            for nm in ranked_0.pdb ranking_debug.json
-            do
-                ccdir="${cc_output_dir}/${exp}/${seq^^}.fasta/${nm}"
-                scp $ccdir $local_pdb_dir
-            done
-        fi
+	cc_output_dir="${cc_data_dir}/output"
+	local_output_dir="${local_data_dir}/output"
+
+	if [ ! -d $local_output_dir ]
+	then
+	    mkdir -p $local_output_dir
+	fi
+
+	for seq in ${seqs[@]}
+	do
+	    echo $seq
+	    local_pdb_dir="${local_output_dir}/${exp}/${seq^^}.fasta"
+	    if [ ! -d $local_pdb_dir ] ; then
+		mkdir -p $local_pdb_dir
+	    fi
+
+	    for nm in ranked_0.pdb ranking_debug.json
+	    do
+		ccdir="${cc_output_dir}/${exp}/${seq^^}.fasta/${nm}"
+		scp $ccdir $local_pdb_dir
+	    done
+	done
     done
-done
+
+fi
