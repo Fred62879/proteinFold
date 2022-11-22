@@ -159,7 +159,6 @@ class pipeline:
 
         ranking_fn = join(dir, self.ranking_fn_str)
         reverted = self.ordered_chain_ids[pdb_id] != self.orig_chain_ids[pdb_id]
-
         variables = utils.get_metric_plot_variables \
             (pdb_id, gt_pdb_fn, pred_pdb_fn, ranking_fn,
              self.ordered_chain_ids[pdb_id], self.interface_dist,

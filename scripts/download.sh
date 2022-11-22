@@ -4,8 +4,8 @@ upload_data=false
 server_to_server=false
 download_input=false
 download_output=false
-zip_output=false
-download_output_zip=true
+zip_output=true
+download_output_zip=false
 
 ds=$1
 server=graham
@@ -29,7 +29,6 @@ if $upload_data; then
     scp $local_dir $cc_dir
 fi
 
-
 ###################
 # server to server
 ###################
@@ -42,7 +41,7 @@ if $server_to_server; then
     for exp in ${exps[@]}
     do
 	cd "${local_dir}/${exp}"
-	to_zip="to_zip"
+	to_zip="${ds}"
 	mkdir $to_zip
 
 	for seq in ${seqs[@]}
@@ -157,17 +156,23 @@ if $zip_output; then
     for exp in ${exps[@]}
     do
 	cd "${local_dir}/${exp}"
-	to_zip="output_zip"
+	to_zip="${ds}_zip"
 	rm -rf $to_zip
 	mkdir $to_zip
 
 	for subdir in ./* ; do
 	    if [[ "$subdir" == *"fasta"* ]] ; then
-		if [[ -f "./${subdir}/ranking_debug.json" && -f "./${subdir}/ranked_0.pdb" ]] ; then
-		    for fn in ranking_debug.json ranked_0.pdb; do
+		echo $subdir
+		for fn in features.pkl ranking_debug.json ranked_0.pdb; do
+		    if [[ -f "./${subdir}/${fn}" ]] ; then
 			cp --parent "${subdir}/${fn}" $to_zip/
-		    done
-		fi
+		    fi
+		done
+		# if [[ -f "./${subdir}/features.pkl" && -f "./${subdir}/ranking_debug.json" && -f "./${subdir}/ranked_0.pdb" ]] ; then
+		#     for fn in features.pkl ranking_debug.json ranked_0.pdb; do
+		# 	cp --parent "${subdir}/${fn}" $to_zip/
+		#     done
+		# fi
 	    fi
 	done
 	zip -r "${to_zip}.zip" "${to_zip}/"
