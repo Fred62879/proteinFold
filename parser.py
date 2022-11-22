@@ -81,6 +81,7 @@ def add_hardcoded_args(config):
     config['removed_linker_fn_str'] = 'ranked_0_removed_linker.pdb'
 
     config['pdb_ids_fn_str'] = 'pdb_ids' # + config['pdb_cho']
+    config['failed_pdbs_fn_str'] = 'failed_pdbs.pkl'
     config['pdb_exclude_fn_str'] = 'pdb_exclude' #+ config['pdb_cho']
     config['pdb_gpu_done_fn_str'] = 'pdb_gpu_done' #+ config['pdb_cho']
     config['pdb_to_download_fn_str'] = 'pdb_to_download' # + config['pdb_cho']
@@ -133,6 +134,7 @@ def add_path(config):
     config['metric_fn'] = join(config['output_dir'], config['metric_fn_str'])
     config['dataset_info_fn'] = join(input_ds_dir, config['dataset_spec_name'])
     config['pdb_exclude_fn'] = join(input_ds_dir, config['pdb_exclude_fn_str']+'.npy')
+    config['failed_pdbs_fn'] = join(config['output_dir'], config['failed_pdbs_fn_str'])
     config['pdb_to_download_fn'] = join(input_ds_dir, config['pdb_to_download_fn_str'])
     config['pdb_gpu_done_fn'] = join(input_ds_dir, config['pdb_gpu_done_fn_str']+'.npy')
     config['orig_chain_ids_fn'] = join(input_ds_dir, config['orig_chain_ids_fn_str'])

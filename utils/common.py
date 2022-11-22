@@ -265,13 +265,12 @@ def get_sasa(pdb_id, pdb_fn):
     sr.compute(struct, level="S")
     return struct.sasa
 
-def get_metric_plot_variables(pdb_id, gt_pdb_fn, pred_pdb_fn, ranking_fn, chain_ids, intrfc_dist):
+def get_metric_plot_variables(pdb_id, gt_pdb_fn, pred_pdb_fn, ranking_fn, chain_ids, intrfc_dist, reverted=False):
     ''' Get variables that we will calculate dockq/rmsd value against
+        @Param
+           reverted: False if order of chain is [receptor,ligand]
         @Return idr_len, num_interface_resid, plddt, sasa, helix chain
     '''
-    reverted = chain_ids[-1]
-    chain_ids = chain_ids[:-1]
-
     load_and_select(intrfc_dist, gt_pdb_fn, pred_pdb_fn, chain_ids)
     cmd.super('native_R','pred_R')
 

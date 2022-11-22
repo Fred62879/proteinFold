@@ -35,6 +35,7 @@ class pipeline:
         self.metric_fn = args.metric_fn
         self.output_dir = args.output_dir
         self.input_pdb_dir = args.input_pdb_dir
+        self.failed_pdbs_fn = args.failed_pdbs_fn
         self.pdb_exclude_fn = args.pdb_exclude_fn
         self.pdb_gpu_done_fn = args.pdb_gpu_done_fn
         self.orig_chain_ids_fn = args.orig_chain_ids_fn
@@ -62,7 +63,7 @@ class pipeline:
 
     def process_output(self):
         pdb_ids = self.select_pdb_ids()
-        failed_pdbs, metrics = [], [self.metric_col_names]
+        failed_pdbs, metrics = {}, [self.metric_col_names]
 
         for pdb_id in pdb_ids:
             cur_pdb_dir = join(self.output_dir, pdb_id + '.fasta')
@@ -71,18 +72,21 @@ class pipeline:
 
             #pred_pdb_fn = self.process_predicted_pdb(pdb_id, gt_pdb_fn, pred_pdb_fn)
             #cur_metrics = self.calculate_metrics(cur_pdb_dir, pdb_id, gt_pdb_fn, pred_pdb_fn)
+
             try:
                 pred_pdb_fn = self.process_predicted_pdb(pdb_id, gt_pdb_fn, pred_pdb_fn)
                 cur_metrics = self.calculate_metrics(cur_pdb_dir, pdb_id, gt_pdb_fn, pred_pdb_fn)
             except Exception as e:
-                failed_pdbs.append(pdb_id)
+                failed_pdbs[pdb_id] = f'{e}'
                 print(f'ERROR: {pdb_id} {e}')
             else: metrics.append(cur_metrics)
 
         utils.write_to_csv(metrics, self.metric_fn)
         pdb_ids, metric_names, data = utils.parse_csv(self.metric_fn)
         utils.plot_scatter(self.output_dir, data, pdb_ids)
-        print('pdbs failed: ', failed_pdbs)
+        #print('pdbs failed: ', failed_pdbs)
+        with open(self.failed_pdbs_fn, 'wb') as fp:
+            pickle.dump(failed_pdbs, fp)
 
     ##########
     # helpers
@@ -154,9 +158,12 @@ class pipeline:
             cur_metrics.insert(0, pdb_id)
 
         ranking_fn = join(dir, self.ranking_fn_str)
+        reverted = self.ordered_chain_ids[pdb_id] == self.orig_chain_ids[pdb_id]
+
         variables = utils.get_metric_plot_variables \
             (pdb_id, gt_pdb_fn, pred_pdb_fn, ranking_fn,
-             self.ordered_chain_ids[pdb_id], self.interface_dist)
+             self.ordered_chain_ids[pdb_id], self.interface_dist,
+             reverted=reverted)
 
         cur_metrics = np.append(cur_metrics, variables)
         return cur_metrics
