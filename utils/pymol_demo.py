@@ -37,7 +37,7 @@ def set_chain_selector(receptor_chain_id, ligand_chain_id, backbone=False):
 
     return receptor_chain_selector, ligand_chain_selector
 
-def load_and_select(interface_dist, gt_pdb_fn, pred_pdb_fn, chain_ids, backbone=False, remove_hydrogen=False):
+def load_and_select(interface_dist, gt_pdb_fn, pred_pdb_fn, ordered_chain_ids, backbone=False, remove_hydrogen=False):
     # Load gt and pred pdb files and select receptor, ligand, and interface
     cmd.delete('all')
     cmd.load(gt_pdb_fn, 'native')
@@ -49,12 +49,9 @@ def load_and_select(interface_dist, gt_pdb_fn, pred_pdb_fn, chain_ids, backbone=
     if remove_hydrogen:
         cmd.remove('hydrogens')
 
-    # only deal with dimers
-    assert(len(chain_ids) == 2)
-
     # first chain is receptor
     receptor_chain_selector, ligand_chain_selector = set_chain_selector \
-        (chain_ids[0], chain_ids[1], backbone)
+        (ordered_chain_ids[0], ordered_chain_ids[1], backbone)
 
     for obj in ['native','pred']:
         # select ligand and receptor based on initial assumption
@@ -83,11 +80,12 @@ def load_and_select(interface_dist, gt_pdb_fn, pred_pdb_fn, chain_ids, backbone=
     iRMS = cmd.align('native_interface_R','pred_interface_R')
     print(LRMS, iRMS)
 
-pdb_id = '1XTG'
-interface_dist = 10
-pdb_fn = f'/media/fred/Local Disk/projects/bioinfo/data/input/ds1/pdbs/{pdb_id}.pdb'
-pred_fn = f'/media/fred/Local Disk/projects/bioinfo/data/output/ds1_af_full/poly_g_20_fasta/{pdb_id}.fasta/ranked_0_removed_linker_aligned.pdb'
-with open('/media/fred/Local Disk/projects/bioinfo/data/input/ds1/poly_g_20_fasta/chain_ids0.pkl','rb') as fp:
+ds = 'ds4'
+pdb_id = '2GGV'
+interface_dist = 5
+pdb_fn = f'/media/fred/Local Disk/projects/bioinfo/data/input/{ds}/pdbs/{pdb_id}.pdb'
+pred_fn = f'/media/fred/Local Disk/projects/bioinfo/data/output/{ds}_af_full/poly_g_20/{pdb_id}.fasta/ranked_0_aligned.pdb'
+with open(f'/media/fred/Local Disk/projects/bioinfo/data/input/{ds}/ordered_chain_ids.pkl','rb') as fp:
     ids = pickle.load(fp)
 ids = ids[pdb_id][:2] # [receptor,ligand]
 load_and_select(interface_dist, pdb_fn, pred_fn, ids, backbone=True)

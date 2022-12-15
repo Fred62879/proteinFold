@@ -91,7 +91,7 @@ class pipeline:
     ##########
     # helpers
     def select_pdb_ids(self):
-        #pdb_ids = ['1S5R']
+        #pdb_ids = ['1A2X']
         excld_fn = self.pdb_exclude_fn
         gpu_done_fn = self.pdb_gpu_done_fn
 
@@ -158,7 +158,7 @@ class pipeline:
             cur_metrics.insert(0, pdb_id)
 
         ranking_fn = join(dir, self.ranking_fn_str)
-        reverted = self.ordered_chain_ids[pdb_id] == self.orig_chain_ids[pdb_id]
+        reverted = self.ordered_chain_ids[pdb_id] != self.orig_chain_ids[pdb_id]
 
         variables = utils.get_metric_plot_variables \
             (pdb_id, gt_pdb_fn, pred_pdb_fn, ranking_fn,
