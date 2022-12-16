@@ -12,6 +12,7 @@ from Bio import SeqIO
 from pymol import cmd
 from os import listdir
 from Bio.Seq import Seq
+from Bio.PDB import DSSP
 from Bio.PDB import PDBParser
 from os.path import join, exists
 from biopandas.pdb import PandasPdb
@@ -38,6 +39,7 @@ def parse_csv(fn):
     pdb_ids, res = [], {}
     data = read_csv(fn)
     metric_names = data[0].split(',')[1:]
+
     for i in range(1, len(data)):
         entries = data[i].split(',')
         pdb_id = entries[0]
@@ -97,6 +99,16 @@ def count_num_atoms_for_each_residue(pdb_fn, remove_H=True):
             cur_num_atoms[resid_id] = n_atoms
         num_atoms.append(cur_num_atoms)
     return num_atoms
+
+def read_residue_secondary_structure(fn):
+    p = PDBParser()
+    structure = p.get_structure("native", fn)
+    model = structure[0]
+    dssp = DSSP(model, fn)
+    secondary = np.array([dssp[key][2] for key in dssp.keys()])
+    resid = read_residue_from_pdb(fn)
+    len1, len2 = len(resid[0]), len(resid[1])
+    return [secondary[:len1], secondary[-len2:]]
 
 def read_residue_from_pdb(fn):
     seq = []
@@ -197,6 +209,17 @@ def set_chain_selector(receptor_chain_id, ligand_chain_id, backbone=False):
         receptor_chain_selector += ' and backbone'
     return receptor_chain_selector, ligand_chain_selector
 
+def get_secondary_structure_resid_ids(fn, secondary_structures):
+    secondary = read_residue_secondary_structure(fn)
+    ids = []
+    for struct in secondary_structures:
+        cur = []
+        for chain_second in secondary:
+            cur_ids = np.where(chain_second == struct)[0]
+            cur.append(cur_ids)
+        ids.append(cur)
+    return ids
+
 def load_and_select(interface_dist, gt_pdb_fn, pred_pdb_fn, ordered_chain_ids, backbone=False, remove_hydrogen=False):
     # Load gt and pred pdb files and select receptor, ligand, and interface
     cmd.delete('all')
@@ -251,12 +274,18 @@ def assign_receptor_ligand(pdb_fn, chain_ids):
         reverted = True
     return (r, l, reverted)
 
-def superimpose_receptors():
-    # superimpose receptor chains and calculate rmsd for idr, assume existence of corresp sels
-    super = cmd.super('native_R','pred_R')
-
 #########
 # metric
+
+def superimpose_receptors(superimposed_fn):
+    # superimpose receptor chains and calculate rmsd for idr, assume existence of corresp sels
+    super = cmd.super('native_R','pred_R')
+    #cmd.color('purple','native_R')
+    #cmd.color('yellow','native_L')
+    #cmd.color('gray','pred_R')
+    #cmd.color('orange','pred_L')
+    cmd.multisave(superimposed_fn, 'all', format='pdb')
+
 def get_sasa(pdb_id, pdb_fn):
     # get solvent accessible surface area of given protein
     p = PDBParser(QUIET=1)
@@ -265,40 +294,53 @@ def get_sasa(pdb_id, pdb_fn):
     sr.compute(struct, level="S")
     return struct.sasa
 
-def get_metric_plot_variables(pdb_id, gt_pdb_fn, pred_pdb_fn, ranking_fn, chain_ids, intrfc_dist, reverted=False):
+def get_metric_plot_variables(pdb_id, gt_pdb_fn, pred_pdb_fn, ranking_fn, superimposed_fn, chain_ids, intrfc_dist, reverted=False, metrics_done=None):
     ''' Get variables that we will calculate dockq/rmsd value against
         @Param
            reverted: False if order of chain is [receptor,ligand]
         @Return idr_len, num_interface_resid, plddt, sasa, helix chain
     '''
     load_and_select(intrfc_dist, gt_pdb_fn, pred_pdb_fn, chain_ids)
-    cmd.super('native_R','pred_R')
+    #cmd.super('native_R','pred_R')
+    superimpose_receptors(superimposed_fn)
 
     # len of ligand
     resid = read_residue_from_pdb(pred_pdb_fn)
-    if reverted: # [ligand,receptor]
-        len_ligand = len(resid[0])
+    if metrics_done is not None and 'idr_len' in metrics_done:
+        len_ligand = metrics_done['idr_len']
     else:
-        len_ligand = len(resid[1])
+        if reverted: # [ligand,receptor]
+            len_ligand = len(resid[0])
+        else:
+            len_ligand = len(resid[1])
 
     # num of interface resid for ligand
-    intrfc_resids = extract_residue_from_selection('pred_interface_L')
-    len_intrfc_resid = len(intrfc_resids)
+    if metrics_done is not None and 'num_interfac_resid' in metrics_done:
+        num_intrfc_resid = metrics_done['num_interface_resid']
+    else:
+        intrfc_resids = extract_residue_from_selection('pred_interface_L')
+        num_intrfc_resid = len(intrfc_resids)
 
     # plddt
-    fp = open(ranking_fn)
-    rank = json.load(fp)
-    best_model_id = rank['order'][0]
-    plddt = rank['plddts'][best_model_id]
+    if metrics_done is not None and 'plddt' in metrics_done:
+        plddt = metrics_done['plddt']
+    else:
+        fp = open(ranking_fn)
+        rank = json.load(fp)
+        best_model_id = rank['order'][0]
+        plddt = rank['plddts'][best_model_id]
 
     # comprehensive sasa: (sasa_r + sasa_l - sasa_super)/2
-    #sasa = get_sasa(pdb_id, gt_pdb_fn) + get_sasa(pdb_id, pred_pdb_fn) - get_sasa(pdb_id, complex_fn)
-    #sasa /= 2
-    sasa = 0
-    return (len_ligand, len_intrfc_resid, plddt, sasa)
+    if metrics_done is not None and 'sasa' in metrics_done:
+        sasa = metrics_done['sasa']
+    else:
+        sasa = get_sasa(pdb_id, gt_pdb_fn) + get_sasa(pdb_id, pred_pdb_fn) - get_sasa(pdb_id, superimposed_fn)
+        sasa /= 2
+
+    return (len_ligand, num_intrfc_resid, plddt, sasa)
 
 def plot_scatter(dir, data, pdb_ids):
-    stat_names = ['idr_len','num_interface_resid','plddt','sasa']
+    stat_names = ['irms','Lrms','idr_len','num_interface_resid','plddt','sasa']
     metric = []
     for pdb_id in pdb_ids:
         metric.append(data[pdb_id]['dockQ'])

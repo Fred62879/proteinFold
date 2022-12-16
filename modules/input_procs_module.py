@@ -9,6 +9,7 @@ import utils.input_procs as iutils
 from pymol import cmd
 from functools import reduce
 from os.path import join, exists
+from utils.common import get_secondary_structure_resid_ids
 
 
 class pipeline:
@@ -24,6 +25,9 @@ class pipeline:
         self.ordered_chain_ids_fn = args.ordered_chain_ids_fn
         self.chain_start_resid_ids_fn = args.chain_start_resid_ids_fn
         self.gt_chain_bd_resid_ids_fn = args.gt_chain_bd_resid_ids_fn
+        self.second_structs_resid_ids_fn = args.second_structs_resid_ids_fn
+
+        self.secondary_structures = args.secondary_structures
 
         if option == 'init_input_procs':
             self._init_input_processing(args)
@@ -87,6 +91,8 @@ class pipeline:
 
         # store original chain ids (order correspd. chain in gt pdb) & ordered chain ids
         self.read_chain_ids_all()
+
+        self.get_secondary_structure_ids()
 
     def locate_extra_atoms(self):
         for pdb_id in self.pdb_ids:
@@ -253,3 +259,12 @@ class pipeline:
         if not self.has_dataset_spec:
             with open(self.ordered_chain_ids_fn, 'wb') as fp:
                 pickle.dump(ordered_chain_ids, fp)
+
+    def get_secondary_structure_ids(self):
+        second_structs_resid_ids = {}
+        for pdb_id in self.pdb_ids:
+            fn = join(self.input_pdb_dir, pdb_id + '.pdb')
+            cur_resid_id = get_secondary_structure_resid_ids(fn, self.secondary_structures)
+            second_structs_resid_ids[pdb_id] = cur_resid_id
+        with open(self.second_structs_resid_ids_fn, 'wb') as fp:
+            pickle.dump(second_structs_resid_ids, fp)

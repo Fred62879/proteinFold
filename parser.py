@@ -13,6 +13,8 @@ def add_cmd_line_args(parser):
     parser.add_argument('--pdb_cho', type=str, default='0', help='can ignore this')
     parser.add_argument('--operations', type=str, nargs='+', help='processing options, refer to config file')
 
+    parser.add_argument('--secondary_structures', type=str, nargs='+')
+
     parser.add_argument('--code_dir', type=str, required=True, help='code directory')
     parser.add_argument('--data_dir', type=str, required=True, help='data directory')
 
@@ -78,7 +80,9 @@ def add_hardcoded_args(config):
     config['ranking_fn_str'] = 'ranking_debug.json'
     config['pruned_fn_str'] = 'ranked_0_pruned.pdb'
     config['aligned_fn_str'] = 'ranked_0_aligned.pdb'
+    config['superimposed_fn_str'] = 'superimposed.pdb'
     config['removed_linker_fn_str'] = 'ranked_0_removed_linker.pdb'
+    config['second_structs_resid_ids_fn_str'] = 'second_structs_resid_ids'
 
     config['pdb_ids_fn_str'] = 'pdb_ids' # + config['pdb_cho']
     config['failed_pdbs_fn_str'] = 'failed_pdbs.pkl'
@@ -93,7 +97,14 @@ def add_hardcoded_args(config):
     backbone_str = '' if not config['backbone'] else '_backbone'
     config['metric_fn_str'] = f'metric{backbone_str}'
     if config['dockq']:
-        config['metric_col_names'] = ['pdb_id','irms','Lrms','dockQ']
+        config['metric_col_names'] = ['pdb_id']
+
+        structs = config['secondary_structures']
+        if structs is not None:
+            for struct in structs:
+                config['metric_col_names'] += [f'irms_{struct}',f'Lrms_{struct}',f'dockQ_{struct}']
+
+        config['metric_col_names'] += ['irms','Lrms','dockQ']
         config['metric_fn_str'] += '_dockq'
     else:
         config['metric_col_names'] = ['pdb_id','ligand (super r)','interface ligand (super r)']
@@ -141,6 +152,7 @@ def add_path(config):
     config['ordered_chain_ids_fn'] = join(input_ds_dir, config['ordered_chain_ids_fn_str'])
     config['chain_start_resid_ids_fn'] = join(config['input_fasta_dir'], config['chain_start_resid_ids_fn_str'])
     config['gt_chain_bd_resid_ids_fn'] = join(config['input_fasta_dir'], config['gt_chain_bd_resid_ids_fn_str'])
+    config['second_structs_resid_ids_fn'] = join(input_ds_dir, config['second_structs_resid_ids_fn_str'])
 
 def add_bash_commands(config):
     # bash command for data downloading

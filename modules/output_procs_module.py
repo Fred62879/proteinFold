@@ -42,17 +42,25 @@ class pipeline:
         self.ordered_chain_ids_fn = args.ordered_chain_ids_fn
         self.chain_start_resid_ids_fn = args.chain_start_resid_ids_fn
         self.gt_chain_bd_resid_ids_fn = args.gt_chain_bd_resid_ids_fn
+        self.second_structs_resid_ids_fn = args.second_structs_resid_ids_fn
 
-        self.ranking_fn_str = args.ranking_fn_str
         self.pruned_fn_str = args.pruned_fn_str
+        self.ranking_fn_str = args.ranking_fn_str
         self.aligned_fn_str = args.aligned_fn_str
         self.pred_pdb_fn_str = args.pred_pdb_fn_str
+        self.superimposed_fn_str = args.superimposed_fn_str
         self.removed_linker_fn_str = args.removed_linker_fn_str
 
         with open(self.orig_chain_ids_fn, 'rb') as fp:
             self.orig_chain_ids = pickle.load(fp)
         with open(self.ordered_chain_ids_fn, 'rb') as fp:
             self.ordered_chain_ids = pickle.load(fp)
+
+        if exists(self.second_structs_resid_ids_fn):
+            with open(self.second_structs_resid_ids_fn, 'rb') as fp:
+                self.second_structs_resid_ids = pickle.load(fp)
+        else:
+            self.second_structs_resid_ids = None
 
         if self.strategy == 'poly_g_link':
             with open(self.chain_start_resid_ids_fn, 'rb') as fp:
@@ -65,21 +73,42 @@ class pipeline:
         pdb_ids = self.select_pdb_ids()
         failed_pdbs, metrics = {}, [self.metric_col_names]
 
-        for pdb_id in pdb_ids:
+        if exists(self.metric_fn):
+            _, metric_names, metrics_done = utils.parse_csv(self.metric_fn)
+        else: metrics_done = None
+
+        #pdb_ids = ['1JGN']
+        for pdb_id in pdb_ids[:1]:
             cur_pdb_dir = join(self.output_dir, pdb_id + '.fasta')
             gt_pdb_fn = join(self.input_pdb_dir, pdb_id + '.pdb')
             pred_pdb_fn = join(cur_pdb_dir, self.pred_pdb_fn_str)
 
-            #pred_pdb_fn = self.process_predicted_pdb(pdb_id, gt_pdb_fn, pred_pdb_fn)
-            #cur_metrics = self.calculate_metrics(cur_pdb_dir, pdb_id, gt_pdb_fn, pred_pdb_fn)
+            pred_pdb_fn = self.process_predicted_pdb(pdb_id, gt_pdb_fn, pred_pdb_fn)
+            cache = None if metrics_done is None or pdb_id not in metrics_done else metrics_done[pdb_id]
+            select_residue_ids = None if self.second_structs_resid_ids is None \
+                else self.second_structs_resid_ids[pdb_id]
 
+            cur_metrics = self.calculate_metrics(cur_pdb_dir, pdb_id, gt_pdb_fn, pred_pdb_fn, cache,
+                                                 selected_residue_ids=select_residue_ids)
+            metrics.append(cur_metrics)
+
+            '''
             try:
                 pred_pdb_fn = self.process_predicted_pdb(pdb_id, gt_pdb_fn, pred_pdb_fn)
-                cur_metrics = self.calculate_metrics(cur_pdb_dir, pdb_id, gt_pdb_fn, pred_pdb_fn)
+                if metrics_done is not None:
+                    cache = None if pdb_id not in metrics_done else metrics_done[pdb_id]
+                    cur_metrics = self.calculate_metrics(cur_pdb_dir, pdb_id, gt_pdb_fn, pred_pdb_fn, cache)
+                else:
+                    select_residue_ids = None if self.second_struct_ids is None \
+                        else self.second_struct_ids[pdb_id]
+                    cur_metrics = self.calculate_metrics(cur_pdb_dir, pdb_id, gt_pdb_fn, pred_pdb_fn,
+                                                         selected_residue_ids=select_residue_ids)
             except Exception as e:
                 failed_pdbs[pdb_id] = f'{e}'
                 print(f'ERROR: {pdb_id} {e}')
-            else: metrics.append(cur_metrics)
+            else:
+                metrics.append(cur_metrics)
+            '''
 
         utils.write_to_csv(metrics, self.metric_fn)
         pdb_ids, metric_names, data = utils.parse_csv(self.metric_fn)
@@ -91,7 +120,6 @@ class pipeline:
     ##########
     # helpers
     def select_pdb_ids(self):
-        #pdb_ids = ['1A2X']
         excld_fn = self.pdb_exclude_fn
         gpu_done_fn = self.pdb_gpu_done_fn
 
@@ -146,23 +174,51 @@ class pipeline:
         utils.assert_seq_equality(gt_pdb_fn, pred_pdb_fn)
         return pred_pdb_fn
 
-    def calculate_metrics(self, dir, pdb_id, gt_pdb_fn, pred_pdb_fn):
+    def calculate_metrics(self, dir, pdb_id, gt_pdb_fn, pred_pdb_fn, metrics_done=None, selected_residue_ids=None):
+        """ Calculate metrics
+            @Param:
+               residue_ids: if not None, designate residues used for metric calculation
+        """
+
+        # whether the order of chains in gt pdb file is receptor-ligand. if not, set reverted as True
+        reverted = self.ordered_chain_ids[pdb_id] != self.orig_chain_ids[pdb_id]
+
         if self.dockq:
-            dockq_metrics = calc_metrics(pred_pdb_fn, gt_pdb_fn, self.fnat_path)
-            (irms, Lrms, dockQ) = dockq_metrics['irms'], dockq_metrics['Lrms'], dockq_metrics['dockQ']
-            cur_metrics = [pdb_id, irms, Lrms, dockQ]
+            if metrics_done is not None and 'irms' in metrics_done and 'Lrms' in metrics_done and 'dockQ' in metrics_done:
+                (irms, Lrms, dockQ) = metrics_done['irms'], metrics_done['Lrms'], metrics_done['dockQ']
+            else:
+                cur_metrics = [pdb_id]
+
+                if selected_residue_ids is not None:
+                    for second_struct_ids in selected_residue_ids: # each 2nd structure
+                        selected_ligand_resid_ids = second_struct_ids[1] if reverted else second_struct_ids[0]
+
+                        dockq_metrics = calc_metrics(pred_pdb_fn, gt_pdb_fn, self.fnat_path,
+                                                     selected_residue_ids=set(selected_ligand_resid_ids))
+
+                        # metrics based off ligand residues within current 2nd structure
+                        cur_metrics += [dockq_metrics['irms'], dockq_metrics['Lrms'], dockq_metrics['dockQ']]
+
+                # metircs without considering 2nd structures
+                dockq_metrics = calc_metrics(pred_pdb_fn, gt_pdb_fn, self.fnat_path)
+                (irms, Lrms, dockQ) = dockq_metrics['irms'], dockq_metrics['Lrms'], dockq_metrics['dockQ']
+                cur_metrics += [irms, Lrms, dockQ]
         else:
-            cur_metrics = outils.calculate_rmsd \
+            if metrics_done is not None and 'rmsd' in metrics_done:
+                cur_metrics = [metrics_done['rmsd']]
+            else:
+                cur_metrics = outils.calculate_rmsd \
                 (pdb_id, gt_pdb_fn, pred_pdb_fn, self.interface_dist,
                  self.order_chain_ids[pdb_id], self.remove_backbone, self.remove_hydrogen)
             cur_metrics.insert(0, pdb_id)
 
         ranking_fn = join(dir, self.ranking_fn_str)
-        reverted = self.ordered_chain_ids[pdb_id] != self.orig_chain_ids[pdb_id]
+        superimposed_fn = join(dir, self.superimposed_fn_str)
+
         variables = utils.get_metric_plot_variables \
-            (pdb_id, gt_pdb_fn, pred_pdb_fn, ranking_fn,
+            (pdb_id, gt_pdb_fn, pred_pdb_fn, ranking_fn, superimposed_fn,
              self.ordered_chain_ids[pdb_id], self.interface_dist,
-             reverted=reverted)
+             reverted=reverted, metrics_done=metrics_done)
 
         cur_metrics = np.append(cur_metrics, variables)
         return cur_metrics
