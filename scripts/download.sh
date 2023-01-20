@@ -3,14 +3,14 @@
 upload_data=false
 server_to_server=false
 download_input=false
-download_output=false
-zip_output=true
+download_output=true
+zip_output=false
 download_output_zip=false
 
 ds=$1
 server=graham
 to_server=narval
-seqs=(3HM6 4FZ1 6KBM 6OF7 6XMU 7DCP 7E2H 7MVY 7P9U 7PP2 7TYR 7VSI)
+seqs=(1A2X) #(3HM6 4FZ1 6KBM 6OF7 6XMU 7DCP 7E2H 7MVY 7P9U 7PP2 7TYR 7VSI)
 
 #############
 #upload data
@@ -93,8 +93,10 @@ fi
 
 if $download_output ; then
     cc_data_dir="fred862@${server}.computecanada.ca:~/scratch/fred862/data/bioinfo"
-    local_data_dir="../../data"
+    local_data_dir="../../../data"
     #local_data_dir="/media/fred/Local Disk/Projects/bioinfo/data"
+
+    exps=("${ds}_af_full/poly_g_20")
 
     for exp in ${exps[@]}
     do
@@ -116,11 +118,18 @@ if $download_output ; then
 		        mkdir -p $local_pdb_dir
 	        fi
 
-	        for nm in ranked_0.pdb ranking_debug.json
-	        do
-		        ccdir="${cc_output_dir}/${exp}/${seq^^}.fasta/${nm}"
-		        scp $ccdir $local_pdb_dir
-	        done
+	        # for nm in ranked_0.pdb ranking_debug.json
+	        # do
+		    #     ccdir="${cc_output_dir}/${exp}/${seq^^}.fasta/${nm}"
+		    #     scp $ccdir $local_pdb_dir
+	        # done
+
+            for nm in bfd_uniclust_hits.a3m
+            do
+                ccdir="${cc_output_dir}/${exp}/${seq^^}.fasta/msas/${nm}"
+                scp $ccdir $local_pdb_dir
+                echo $local_pdb_dir
+            done
 	    done
     done
 fi
