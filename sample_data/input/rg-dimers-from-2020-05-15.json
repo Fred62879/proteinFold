@@ -1,0 +1,1311 @@
+{
+  "7B2B": {
+    "deposit_date": "2020-11-26T00:00:00Z",
+    "revision_date": "2021-06-23T00:00:00Z",
+    "idp_chain_ids": [
+      "B"
+    ],
+    "receptor_chain_ids": [
+      "A"
+    ],
+    "buried_surface_area": "208.64484"
+  },
+  "1JMT": {
+    "deposit_date": "2001-07-19T00:00:00Z",
+    "revision_date": "2021-10-27T00:00:00Z",
+    "idp_chain_ids": [
+      "B"
+    ],
+    "receptor_chain_ids": [
+      "A"
+    ],
+    "buried_surface_area": "82.05887"
+  },
+  "6OF7": {
+    "deposit_date": "2019-03-28T00:00:00Z",
+    "revision_date": "2020-09-16T00:00:00Z",
+    "idp_chain_ids": [
+      "B"
+    ],
+    "receptor_chain_ids": [
+      "A"
+    ],
+    "buried_surface_area": "246.64233"
+  },
+  "6LQZ": {
+    "deposit_date": "2020-01-15T00:00:00Z",
+    "revision_date": "2020-09-16T00:00:00Z",
+    "idp_chain_ids": [
+      "B"
+    ],
+    "receptor_chain_ids": [
+      "A"
+    ],
+    "buried_surface_area": "158.2201"
+  },
+  "1WLP": {
+    "deposit_date": "2004-06-29T00:00:00Z",
+    "revision_date": "2022-03-02T00:00:00Z",
+    "idp_chain_ids": [
+      "A"
+    ],
+    "receptor_chain_ids": [
+      "B"
+    ],
+    "buried_surface_area": "163.02008"
+  },
+  "2E30": {
+    "deposit_date": "2006-11-19T00:00:00Z",
+    "revision_date": "2022-03-09T00:00:00Z",
+    "idp_chain_ids": [
+      "B"
+    ],
+    "receptor_chain_ids": [
+      "A"
+    ],
+    "buried_surface_area": "288.36743"
+  },
+  "2LEH": {
+    "deposit_date": "2011-06-15T00:00:00Z",
+    "revision_date": "2021-08-18T00:00:00Z",
+    "idp_chain_ids": [
+      "B"
+    ],
+    "receptor_chain_ids": [
+      "A"
+    ],
+    "buried_surface_area": "156.83789"
+  },
+  "7BQV": {
+    "deposit_date": "2020-03-25T00:00:00Z",
+    "revision_date": "2020-10-14T00:00:00Z",
+    "idp_chain_ids": [
+      "B"
+    ],
+    "receptor_chain_ids": [
+      "A"
+    ],
+    "buried_surface_area": "47.312622"
+  },
+  "6LRY": {
+    "deposit_date": "2020-01-16T00:00:00Z",
+    "revision_date": "2020-07-01T00:00:00Z",
+    "idp_chain_ids": [
+      "B"
+    ],
+    "receptor_chain_ids": [
+      "A"
+    ],
+    "buried_surface_area": "155.98547"
+  },
+  "4JO8": {
+    "deposit_date": "2013-03-18T00:00:00Z",
+    "revision_date": "2020-07-29T00:00:00Z",
+    "idp_chain_ids": [
+      "B"
+    ],
+    "receptor_chain_ids": [
+      "A"
+    ],
+    "buried_surface_area": "47.363037"
+  },
+  "7MNS": {
+    "deposit_date": "2021-05-01T00:00:00Z",
+    "revision_date": "2022-06-22T00:00:00Z",
+    "idp_chain_ids": [
+      "B"
+    ],
+    "receptor_chain_ids": [
+      "A"
+    ],
+    "buried_surface_area": "156.10815"
+  },
+  "1ORY": {
+    "deposit_date": "2003-03-17T00:00:00Z",
+    "revision_date": "2021-10-27T00:00:00Z",
+    "idp_chain_ids": [
+      "B"
+    ],
+    "receptor_chain_ids": [
+      "A"
+    ],
+    "buried_surface_area": "172.14764"
+  },
+  "7MVY": {
+    "deposit_date": "2021-05-15T00:00:00Z",
+    "revision_date": "2022-06-22T00:00:00Z",
+    "idp_chain_ids": [
+      "B"
+    ],
+    "receptor_chain_ids": [
+      "A"
+    ],
+    "buried_surface_area": "343.39795"
+  },
+  "2K42": {
+    "deposit_date": "2008-05-27T00:00:00Z",
+    "revision_date": "2022-03-16T00:00:00Z",
+    "idp_chain_ids": [
+      "B"
+    ],
+    "receptor_chain_ids": [
+      "A"
+    ],
+    "buried_surface_area": "177.48956"
+  },
+  "6TL0": {
+    "deposit_date": "2019-11-29T00:00:00Z",
+    "revision_date": "2020-10-21T00:00:00Z",
+    "idp_chain_ids": [
+      "B"
+    ],
+    "receptor_chain_ids": [
+      "A"
+    ],
+    "buried_surface_area": "65.3147"
+  },
+  "3M51": {
+    "deposit_date": "2010-03-12T00:00:00Z",
+    "revision_date": "2021-11-10T00:00:00Z",
+    "idp_chain_ids": [
+      "P"
+    ],
+    "receptor_chain_ids": [
+      "A"
+    ],
+    "buried_surface_area": "93.75067"
+  },
+  "7OS1": {
+    "deposit_date": "2021-06-07T00:00:00Z",
+    "revision_date": "2022-03-30T00:00:00Z",
+    "idp_chain_ids": [
+      "F"
+    ],
+    "receptor_chain_ids": [
+      "B"
+    ],
+    "buried_surface_area": "152.92773"
+  },
+  "5LZ6": {
+    "deposit_date": "2016-09-29T00:00:00Z",
+    "revision_date": "2020-07-29T00:00:00Z",
+    "idp_chain_ids": [
+      "B"
+    ],
+    "receptor_chain_ids": [
+      "A"
+    ],
+    "buried_surface_area": "123.4888"
+  },
+  "6LPH": {
+    "deposit_date": "2020-01-10T00:00:00Z",
+    "revision_date": "2021-01-13T00:00:00Z",
+    "idp_chain_ids": [
+      "B"
+    ],
+    "receptor_chain_ids": [
+      "A"
+    ],
+    "buried_surface_area": "79.22406"
+  },
+  "3HK3": {
+    "deposit_date": "2009-05-22T00:00:00Z",
+    "revision_date": "2021-10-13T00:00:00Z",
+    "idp_chain_ids": [
+      "A"
+    ],
+    "receptor_chain_ids": [
+      "B"
+    ],
+    "buried_surface_area": "111.63306"
+  },
+  "7PKU": {
+    "deposit_date": "2021-08-26T00:00:00Z",
+    "revision_date": "2022-02-02T00:00:00Z",
+    "idp_chain_ids": [
+      "B"
+    ],
+    "receptor_chain_ids": [
+      "A"
+    ],
+    "buried_surface_area": "197.38159"
+  },
+  "2PQ4": {
+    "deposit_date": "2007-05-01T00:00:00Z",
+    "revision_date": "2022-03-16T00:00:00Z",
+    "idp_chain_ids": [
+      "B"
+    ],
+    "receptor_chain_ids": [
+      "A"
+    ],
+    "buried_surface_area": "121.37213"
+  },
+  "1PD7": {
+    "deposit_date": "2003-05-19T00:00:00Z",
+    "revision_date": "2022-02-23T00:00:00Z",
+    "idp_chain_ids": [
+      "B"
+    ],
+    "receptor_chain_ids": [
+      "A"
+    ],
+    "buried_surface_area": "172.45013"
+  },
+  "6KK6": {
+    "deposit_date": "2019-07-23T00:00:00Z",
+    "revision_date": "2020-08-19T00:00:00Z",
+    "idp_chain_ids": [
+      "A"
+    ],
+    "receptor_chain_ids": [
+      "B"
+    ],
+    "buried_surface_area": "183.60254"
+  },
+  "7VD7": {
+    "deposit_date": "2021-09-06T00:00:00Z",
+    "revision_date": "2022-09-28T00:00:00Z",
+    "idp_chain_ids": [
+      "B"
+    ],
+    "receptor_chain_ids": [
+      "A"
+    ],
+    "buried_surface_area": "158.59225"
+  },
+  "8DJH": {
+    "deposit_date": "2022-06-30T00:00:00Z",
+    "revision_date": "2022-08-24T00:00:00Z",
+    "idp_chain_ids": [
+      "B"
+    ],
+    "receptor_chain_ids": [
+      "A"
+    ],
+    "buried_surface_area": "166.94128"
+  },
+  "6KLR": {
+    "deposit_date": "2019-07-30T00:00:00Z",
+    "revision_date": "2020-06-17T00:00:00Z",
+    "idp_chain_ids": [
+      "B"
+    ],
+    "receptor_chain_ids": [
+      "A"
+    ],
+    "buried_surface_area": "118.50812"
+  },
+  "6JAU": {
+    "deposit_date": "2019-01-25T00:00:00Z",
+    "revision_date": "2020-08-19T00:00:00Z",
+    "idp_chain_ids": [
+      "B"
+    ],
+    "receptor_chain_ids": [
+      "A"
+    ],
+    "buried_surface_area": "211.93408"
+  },
+  "6UZ5": {
+    "deposit_date": "2019-11-14T00:00:00Z",
+    "revision_date": "2020-12-09T00:00:00Z",
+    "idp_chain_ids": [
+      "B"
+    ],
+    "receptor_chain_ids": [
+      "A"
+    ],
+    "buried_surface_area": "105.92273"
+  },
+  "2AFF": {
+    "deposit_date": "2005-07-25T00:00:00Z",
+    "revision_date": "2022-03-09T00:00:00Z",
+    "idp_chain_ids": [
+      "B"
+    ],
+    "receptor_chain_ids": [
+      "A"
+    ],
+    "buried_surface_area": "243.79565"
+  },
+  "6KBM": {
+    "deposit_date": "2019-06-25T00:00:00Z",
+    "revision_date": "2020-05-27T00:00:00Z",
+    "idp_chain_ids": [
+      "B"
+    ],
+    "receptor_chain_ids": [
+      "A"
+    ],
+    "buried_surface_area": "130.34949"
+  },
+  "7VLJ": {
+    "deposit_date": "2021-10-03T00:00:00Z",
+    "revision_date": "2021-11-17T00:00:00Z",
+    "idp_chain_ids": [
+      "B"
+    ],
+    "receptor_chain_ids": [
+      "A"
+    ],
+    "buried_surface_area": "235.61084"
+  },
+  "6L8G": {
+    "deposit_date": "2019-11-06T00:00:00Z",
+    "revision_date": "2020-11-11T00:00:00Z",
+    "idp_chain_ids": [
+      "A"
+    ],
+    "receptor_chain_ids": [
+      "B"
+    ],
+    "buried_surface_area": "152.7576"
+  },
+  "3HM6": {
+    "deposit_date": "2009-05-28T00:00:00Z",
+    "revision_date": "2021-10-13T00:00:00Z",
+    "idp_chain_ids": [
+      "C"
+    ],
+    "receptor_chain_ids": [
+      "X"
+    ],
+    "buried_surface_area": "31.763672"
+  },
+  "7Y9N": {
+    "deposit_date": "2022-06-25T00:00:00Z",
+    "revision_date": "2022-08-17T00:00:00Z",
+    "idp_chain_ids": [
+      "B"
+    ],
+    "receptor_chain_ids": [
+      "A"
+    ],
+    "buried_surface_area": "146.305"
+  },
+  "2FHO": {
+    "deposit_date": "2005-12-26T00:00:00Z",
+    "revision_date": "2022-03-09T00:00:00Z",
+    "idp_chain_ids": [
+      "A"
+    ],
+    "receptor_chain_ids": [
+      "B"
+    ],
+    "buried_surface_area": "160.58838"
+  },
+  "7JYZ": {
+    "deposit_date": "2020-09-01T00:00:00Z",
+    "revision_date": "2021-08-18T00:00:00Z",
+    "idp_chain_ids": [
+      "A"
+    ],
+    "receptor_chain_ids": [
+      "B"
+    ],
+    "buried_surface_area": "147.6018"
+  },
+  "2JOD": {
+    "deposit_date": "2007-03-07T00:00:00Z",
+    "revision_date": "2021-10-20T00:00:00Z",
+    "idp_chain_ids": [
+      "B"
+    ],
+    "receptor_chain_ids": [
+      "A"
+    ],
+    "buried_surface_area": "245.02826"
+  },
+  "5GTU": {
+    "deposit_date": "2016-08-23T00:00:00Z",
+    "revision_date": "2022-03-23T00:00:00Z",
+    "idp_chain_ids": [
+      "B"
+    ],
+    "receptor_chain_ids": [
+      "A"
+    ],
+    "buried_surface_area": "66.53665"
+  },
+  "6SBA": {
+    "deposit_date": "2019-07-19T00:00:00Z",
+    "revision_date": "2021-04-28T00:00:00Z",
+    "idp_chain_ids": [
+      "B"
+    ],
+    "receptor_chain_ids": [
+      "A"
+    ],
+    "buried_surface_area": "103.54297"
+  },
+  "4CAA": {
+    "deposit_date": "1997-08-14T00:00:00Z",
+    "revision_date": "2021-11-03T00:00:00Z",
+    "idp_chain_ids": [
+      "B"
+    ],
+    "receptor_chain_ids": [
+      "A"
+    ],
+    "buried_surface_area": "226.44849"
+  },
+  "7SR9": {
+    "deposit_date": "2021-11-08T00:00:00Z",
+    "revision_date": "2022-06-22T00:00:00Z",
+    "idp_chain_ids": [
+      "A"
+    ],
+    "receptor_chain_ids": [
+      "B"
+    ],
+    "buried_surface_area": "134.5669"
+  },
+  "2KJ4": {
+    "deposit_date": "2009-05-21T00:00:00Z",
+    "revision_date": "2022-03-16T00:00:00Z",
+    "idp_chain_ids": [
+      "B"
+    ],
+    "receptor_chain_ids": [
+      "A"
+    ],
+    "buried_surface_area": "118.66748"
+  },
+  "7NDX": {
+    "deposit_date": "2021-02-02T00:00:00Z",
+    "revision_date": "2022-02-16T00:00:00Z",
+    "idp_chain_ids": [
+      "B"
+    ],
+    "receptor_chain_ids": [
+      "A"
+    ],
+    "buried_surface_area": "123.6792"
+  },
+  "7QDW": {
+    "deposit_date": "2021-11-30T00:00:00Z",
+    "revision_date": "2022-04-13T00:00:00Z",
+    "idp_chain_ids": [
+      "B"
+    ],
+    "receptor_chain_ids": [
+      "A"
+    ],
+    "buried_surface_area": "219.9638"
+  },
+  "7LWB": {
+    "deposit_date": "2021-02-28T00:00:00Z",
+    "revision_date": "2021-05-12T00:00:00Z",
+    "idp_chain_ids": [
+      "D"
+    ],
+    "receptor_chain_ids": [
+      "A"
+    ],
+    "buried_surface_area": "45.2135"
+  },
+  "7CNC": {
+    "deposit_date": "2020-07-30T00:00:00Z",
+    "revision_date": "2020-11-18T00:00:00Z",
+    "idp_chain_ids": [
+      "B"
+    ],
+    "receptor_chain_ids": [
+      "A"
+    ],
+    "buried_surface_area": "45.85559"
+  },
+  "2KC8": {
+    "deposit_date": "2008-12-17T00:00:00Z",
+    "revision_date": "2021-10-20T00:00:00Z",
+    "idp_chain_ids": [
+      "B"
+    ],
+    "receptor_chain_ids": [
+      "A"
+    ],
+    "buried_surface_area": "288.54187"
+  },
+  "4MMR": {
+    "deposit_date": "2013-09-09T00:00:00Z",
+    "revision_date": "2021-06-02T00:00:00Z",
+    "idp_chain_ids": [
+      "A"
+    ],
+    "receptor_chain_ids": [
+      "B"
+    ],
+    "buried_surface_area": "395.62915"
+  },
+  "7AHP": {
+    "deposit_date": "2020-09-25T00:00:00Z",
+    "revision_date": "2021-03-10T00:00:00Z",
+    "idp_chain_ids": [
+      "aa"
+    ],
+    "receptor_chain_ids": [
+      "A"
+    ],
+    "buried_surface_area": "218.43042"
+  },
+  "4LX3": {
+    "deposit_date": "2013-07-29T00:00:00Z",
+    "revision_date": "2022-08-24T00:00:00Z",
+    "idp_chain_ids": [
+      "B"
+    ],
+    "receptor_chain_ids": [
+      "A"
+    ],
+    "buried_surface_area": "223.2204"
+  },
+  "7OY3": {
+    "deposit_date": "2021-06-23T00:00:00Z",
+    "revision_date": "2021-12-01T00:00:00Z",
+    "idp_chain_ids": [
+      "B"
+    ],
+    "receptor_chain_ids": [
+      "A"
+    ],
+    "buried_surface_area": "130.23883"
+  },
+  "7A48": {
+    "deposit_date": "2020-08-19T00:00:00Z",
+    "revision_date": "2021-08-11T00:00:00Z",
+    "idp_chain_ids": [
+      "B"
+    ],
+    "receptor_chain_ids": [
+      "A"
+    ],
+    "buried_surface_area": "77.732025"
+  },
+  "1L4W": {
+    "deposit_date": "2002-03-06T00:00:00Z",
+    "revision_date": "2022-02-23T00:00:00Z",
+    "idp_chain_ids": [
+      "B"
+    ],
+    "receptor_chain_ids": [
+      "A"
+    ],
+    "buried_surface_area": "147.20233"
+  },
+  "7PP2": {
+    "deposit_date": "2021-09-13T00:00:00Z",
+    "revision_date": "2022-06-29T00:00:00Z",
+    "idp_chain_ids": [
+      "B"
+    ],
+    "receptor_chain_ids": [
+      "A"
+    ],
+    "buried_surface_area": "81.975586"
+  },
+  "5L9Z": {
+    "deposit_date": "2016-06-13T00:00:00Z",
+    "revision_date": "2020-07-29T00:00:00Z",
+    "idp_chain_ids": [
+      "B"
+    ],
+    "receptor_chain_ids": [
+      "A"
+    ],
+    "buried_surface_area": "393.89"
+  },
+  "6Q67": {
+    "deposit_date": "2018-12-10T00:00:00Z",
+    "revision_date": "2020-07-29T00:00:00Z",
+    "idp_chain_ids": [
+      "B"
+    ],
+    "receptor_chain_ids": [
+      "A"
+    ],
+    "buried_surface_area": "104.62341"
+  },
+  "7BY2": {
+    "deposit_date": "2020-04-21T00:00:00Z",
+    "revision_date": "2021-04-28T00:00:00Z",
+    "idp_chain_ids": [
+      "A"
+    ],
+    "receptor_chain_ids": [
+      "B"
+    ],
+    "buried_surface_area": "69.53717"
+  },
+  "7LJ0": {
+    "deposit_date": "2021-01-28T00:00:00Z",
+    "revision_date": "2021-04-07T00:00:00Z",
+    "idp_chain_ids": [
+      "A"
+    ],
+    "receptor_chain_ids": [
+      "B"
+    ],
+    "buried_surface_area": "47.951416"
+  },
+  "7SJQ": {
+    "deposit_date": "2021-10-18T00:00:00Z",
+    "revision_date": "2022-06-08T00:00:00Z",
+    "idp_chain_ids": [
+      "D"
+    ],
+    "receptor_chain_ids": [
+      "A"
+    ],
+    "buried_surface_area": "52.21939"
+  },
+  "7F69": {
+    "deposit_date": "2021-06-24T00:00:00Z",
+    "revision_date": "2022-07-27T00:00:00Z",
+    "idp_chain_ids": [
+      "C"
+    ],
+    "receptor_chain_ids": [
+      "A"
+    ],
+    "buried_surface_area": "104.23108"
+  },
+  "7OVC": {
+    "deposit_date": "2021-06-14T00:00:00Z",
+    "revision_date": "2021-08-04T00:00:00Z",
+    "idp_chain_ids": [
+      "B"
+    ],
+    "receptor_chain_ids": [
+      "A"
+    ],
+    "buried_surface_area": "201.74915"
+  },
+  "2DT7": {
+    "deposit_date": "2006-07-11T00:00:00Z",
+    "revision_date": "2022-03-09T00:00:00Z",
+    "idp_chain_ids": [
+      "A"
+    ],
+    "receptor_chain_ids": [
+      "B"
+    ],
+    "buried_surface_area": "121.29358"
+  },
+  "7S5J": {
+    "deposit_date": "2021-09-10T00:00:00Z",
+    "revision_date": "2022-02-23T00:00:00Z",
+    "idp_chain_ids": [
+      "B"
+    ],
+    "receptor_chain_ids": [
+      "A"
+    ],
+    "buried_surface_area": "207.1784"
+  },
+  "7QV8": {
+    "deposit_date": "2022-01-20T00:00:00Z",
+    "revision_date": "2022-03-16T00:00:00Z",
+    "idp_chain_ids": [
+      "D"
+    ],
+    "receptor_chain_ids": [
+      "A"
+    ],
+    "buried_surface_area": "59.34137"
+  },
+  "2JSS": {
+    "deposit_date": "2007-07-11T00:00:00Z",
+    "revision_date": "2021-08-18T00:00:00Z",
+    "idp_chain_ids": [
+      "B"
+    ],
+    "receptor_chain_ids": [
+      "A"
+    ],
+    "buried_surface_area": "335.15112"
+  },
+  "2KDU": {
+    "deposit_date": "2009-01-19T00:00:00Z",
+    "revision_date": "2022-03-16T00:00:00Z",
+    "idp_chain_ids": [
+      "B"
+    ],
+    "receptor_chain_ids": [
+      "A"
+    ],
+    "buried_surface_area": "269.31055"
+  },
+  "6XXF": {
+    "deposit_date": "2020-01-27T00:00:00Z",
+    "revision_date": "2022-01-26T00:00:00Z",
+    "idp_chain_ids": [
+      "BBB"
+    ],
+    "receptor_chain_ids": [
+      "AAA"
+    ],
+    "buried_surface_area": "290.8634"
+  },
+  "7NJ1": {
+    "deposit_date": "2021-02-14T00:00:00Z",
+    "revision_date": "2021-08-18T00:00:00Z",
+    "idp_chain_ids": [
+      "B"
+    ],
+    "receptor_chain_ids": [
+      "A"
+    ],
+    "buried_surface_area": "326.1809"
+  },
+  "1PNB": {
+    "deposit_date": "1996-09-17T00:00:00Z",
+    "revision_date": "2022-03-02T00:00:00Z",
+    "idp_chain_ids": [
+      "A"
+    ],
+    "receptor_chain_ids": [
+      "B"
+    ],
+    "buried_surface_area": "88.59265"
+  },
+  "7FB5": {
+    "deposit_date": "2021-07-08T00:00:00Z",
+    "revision_date": "2022-03-23T00:00:00Z",
+    "idp_chain_ids": [
+      "B"
+    ],
+    "receptor_chain_ids": [
+      "A"
+    ],
+    "buried_surface_area": "71.932434"
+  },
+  "2OFQ": {
+    "deposit_date": "2007-01-04T00:00:00Z",
+    "revision_date": "2022-03-16T00:00:00Z",
+    "idp_chain_ids": [
+      "B"
+    ],
+    "receptor_chain_ids": [
+      "A"
+    ],
+    "buried_surface_area": "161.15198"
+  },
+  "1YHN": {
+    "deposit_date": "2005-01-10T00:00:00Z",
+    "revision_date": "2021-11-10T00:00:00Z",
+    "idp_chain_ids": [
+      "B"
+    ],
+    "receptor_chain_ids": [
+      "A"
+    ],
+    "buried_surface_area": "66.619385"
+  },
+  "6XY4": {
+    "deposit_date": "2020-01-29T00:00:00Z",
+    "revision_date": "2020-07-29T00:00:00Z",
+    "idp_chain_ids": [
+      "B"
+    ],
+    "receptor_chain_ids": [
+      "A"
+    ],
+    "buried_surface_area": "153.66968"
+  },
+  "1Q0W": {
+    "deposit_date": "2003-07-17T00:00:00Z",
+    "revision_date": "2021-10-27T00:00:00Z",
+    "idp_chain_ids": [
+      "A"
+    ],
+    "receptor_chain_ids": [
+      "B"
+    ],
+    "buried_surface_area": "107.72351"
+  },
+  "7DHG": {
+    "deposit_date": "2020-11-14T00:00:00Z",
+    "revision_date": "2021-06-02T00:00:00Z",
+    "idp_chain_ids": [
+      "B"
+    ],
+    "receptor_chain_ids": [
+      "C"
+    ],
+    "buried_surface_area": "185.55688"
+  },
+  "2H4Q": {
+    "deposit_date": "2006-05-25T00:00:00Z",
+    "revision_date": "2021-11-10T00:00:00Z",
+    "idp_chain_ids": [
+      "B"
+    ],
+    "receptor_chain_ids": [
+      "A"
+    ],
+    "buried_surface_area": "228.61865"
+  },
+  "2FOT": {
+    "deposit_date": "2006-01-13T00:00:00Z",
+    "revision_date": "2021-10-20T00:00:00Z",
+    "idp_chain_ids": [
+      "C"
+    ],
+    "receptor_chain_ids": [
+      "A"
+    ],
+    "buried_surface_area": "119.668396"
+  },
+  "7E2H": {
+    "deposit_date": "2021-02-05T00:00:00Z",
+    "revision_date": "2021-12-08T00:00:00Z",
+    "idp_chain_ids": [
+      "D"
+    ],
+    "receptor_chain_ids": [
+      "E"
+    ],
+    "buried_surface_area": "301.6139"
+  },
+  "1UEL": {
+    "deposit_date": "2003-05-19T00:00:00Z",
+    "revision_date": "2022-03-02T00:00:00Z",
+    "idp_chain_ids": [
+      "B"
+    ],
+    "receptor_chain_ids": [
+      "A"
+    ],
+    "buried_surface_area": "135.99927"
+  },
+  "6XFL": {
+    "deposit_date": "2020-06-15T00:00:00Z",
+    "revision_date": "2021-02-17T00:00:00Z",
+    "idp_chain_ids": [
+      "B"
+    ],
+    "receptor_chain_ids": [
+      "A"
+    ],
+    "buried_surface_area": "175.74915"
+  },
+  "1K9O": {
+    "deposit_date": "2001-10-29T00:00:00Z",
+    "revision_date": "2021-10-27T00:00:00Z",
+    "idp_chain_ids": [
+      "E"
+    ],
+    "receptor_chain_ids": [
+      "I"
+    ],
+    "buried_surface_area": "86.00989"
+  },
+  "7NMI": {
+    "deposit_date": "2021-02-23T00:00:00Z",
+    "revision_date": "2022-03-02T00:00:00Z",
+    "idp_chain_ids": [
+      "A"
+    ],
+    "receptor_chain_ids": [
+      "B"
+    ],
+    "buried_surface_area": "130.72937"
+  },
+  "2AUH": {
+    "deposit_date": "2005-08-27T00:00:00Z",
+    "revision_date": "2021-10-20T00:00:00Z",
+    "idp_chain_ids": [
+      "B"
+    ],
+    "receptor_chain_ids": [
+      "A"
+    ],
+    "buried_surface_area": "110.57922"
+  },
+  "2GZH": {
+    "deposit_date": "2006-05-11T00:00:00Z",
+    "revision_date": "2021-10-20T00:00:00Z",
+    "idp_chain_ids": [
+      "B"
+    ],
+    "receptor_chain_ids": [
+      "A"
+    ],
+    "buried_surface_area": "53.82666"
+  },
+  "1LEM": {
+    "deposit_date": "1993-11-17T00:00:00Z",
+    "revision_date": "2020-07-29T00:00:00Z",
+    "idp_chain_ids": [
+      "B"
+    ],
+    "receptor_chain_ids": [
+      "A"
+    ],
+    "buried_surface_area": "361.67535"
+  },
+  "2GGV": {
+    "deposit_date": "2006-03-24T00:00:00Z",
+    "revision_date": "2021-10-20T00:00:00Z",
+    "idp_chain_ids": [
+      "A"
+    ],
+    "receptor_chain_ids": [
+      "B"
+    ],
+    "buried_surface_area": "134.68701"
+  },
+  "6WUD": {
+    "deposit_date": "2020-05-04T00:00:00Z",
+    "revision_date": "2021-07-28T00:00:00Z",
+    "idp_chain_ids": [
+      "B"
+    ],
+    "receptor_chain_ids": [
+      "A"
+    ],
+    "buried_surface_area": "304.21924"
+  },
+  "6S9K": {
+    "deposit_date": "2019-07-15T00:00:00Z",
+    "revision_date": "2020-08-26T00:00:00Z",
+    "idp_chain_ids": [
+      "B"
+    ],
+    "receptor_chain_ids": [
+      "A"
+    ],
+    "buried_surface_area": "73.17914"
+  },
+  "2PHG": {
+    "deposit_date": "2007-04-11T00:00:00Z",
+    "revision_date": "2022-03-16T00:00:00Z",
+    "idp_chain_ids": [
+      "B"
+    ],
+    "receptor_chain_ids": [
+      "A"
+    ],
+    "buried_surface_area": "93.04199"
+  },
+  "7UZO": {
+    "deposit_date": "2022-05-09T00:00:00Z",
+    "revision_date": "2022-10-19T00:00:00Z",
+    "idp_chain_ids": [
+      "B"
+    ],
+    "receptor_chain_ids": [
+      "A"
+    ],
+    "buried_surface_area": "179.28015"
+  },
+  "1QFN": {
+    "deposit_date": "1999-04-12T00:00:00Z",
+    "revision_date": "2021-11-03T00:00:00Z",
+    "idp_chain_ids": [
+      "B"
+    ],
+    "receptor_chain_ids": [
+      "A"
+    ],
+    "buried_surface_area": "138.63556"
+  },
+  "2ROZ": {
+    "deposit_date": "2008-04-25T00:00:00Z",
+    "revision_date": "2022-03-16T00:00:00Z",
+    "idp_chain_ids": [
+      "A"
+    ],
+    "receptor_chain_ids": [
+      "B"
+    ],
+    "buried_surface_area": "154.51129"
+  },
+  "7DCP": {
+    "deposit_date": "2020-10-26T00:00:00Z",
+    "revision_date": "2021-01-27T00:00:00Z",
+    "idp_chain_ids": [
+      "y"
+    ],
+    "receptor_chain_ids": [
+      "x"
+    ],
+    "buried_surface_area": "221.9093"
+  },
+  "5KY9": {
+    "deposit_date": "2016-07-21T00:00:00Z",
+    "revision_date": "2020-07-29T00:00:00Z",
+    "idp_chain_ids": [
+      "B"
+    ],
+    "receptor_chain_ids": [
+      "A"
+    ],
+    "buried_surface_area": "151.16504"
+  },
+  "7EV8": {
+    "deposit_date": "2021-05-20T00:00:00Z",
+    "revision_date": "2022-04-27T00:00:00Z",
+    "idp_chain_ids": [
+      "B"
+    ],
+    "receptor_chain_ids": [
+      "A"
+    ],
+    "buried_surface_area": "73.14758"
+  },
+  "6ZVQ": {
+    "deposit_date": "2020-07-27T00:00:00Z",
+    "revision_date": "2021-06-09T00:00:00Z",
+    "idp_chain_ids": [
+      "B"
+    ],
+    "receptor_chain_ids": [
+      "A"
+    ],
+    "buried_surface_area": "87.80597"
+  },
+  "5L0T": {
+    "deposit_date": "2016-07-28T00:00:00Z",
+    "revision_date": "2021-03-24T00:00:00Z",
+    "idp_chain_ids": [
+      "B"
+    ],
+    "receptor_chain_ids": [
+      "A"
+    ],
+    "buried_surface_area": "138.84521"
+  },
+  "7P9U": {
+    "deposit_date": "2021-07-28T00:00:00Z",
+    "revision_date": "2022-02-02T00:00:00Z",
+    "idp_chain_ids": [
+      "A"
+    ],
+    "receptor_chain_ids": [
+      "B"
+    ],
+    "buried_surface_area": "96.65454"
+  },
+  "6XMU": {
+    "deposit_date": "2020-06-30T00:00:00Z",
+    "revision_date": "2020-10-07T00:00:00Z",
+    "idp_chain_ids": [
+      "B"
+    ],
+    "receptor_chain_ids": [
+      "A"
+    ],
+    "buried_surface_area": "25.595215"
+  },
+  "2JU0": {
+    "deposit_date": "2007-08-11T00:00:00Z",
+    "revision_date": "2022-03-16T00:00:00Z",
+    "idp_chain_ids": [
+      "B"
+    ],
+    "receptor_chain_ids": [
+      "A"
+    ],
+    "buried_surface_area": "290.80652"
+  },
+  "3BZV": {
+    "deposit_date": "2008-01-18T00:00:00Z",
+    "revision_date": "2021-10-20T00:00:00Z",
+    "idp_chain_ids": [
+      "A"
+    ],
+    "receptor_chain_ids": [
+      "B"
+    ],
+    "buried_surface_area": "124.260345"
+  },
+  "1JGN": {
+    "deposit_date": "2001-06-26T00:00:00Z",
+    "revision_date": "2022-02-23T00:00:00Z",
+    "idp_chain_ids": [
+      "B"
+    ],
+    "receptor_chain_ids": [
+      "A"
+    ],
+    "buried_surface_area": "167.08313"
+  },
+  "2KGB": {
+    "deposit_date": "2009-03-07T00:00:00Z",
+    "revision_date": "2021-10-20T00:00:00Z",
+    "idp_chain_ids": [
+      "I"
+    ],
+    "receptor_chain_ids": [
+      "C"
+    ],
+    "buried_surface_area": "98.70062"
+  },
+  "1C8O": {
+    "deposit_date": "2000-06-01T00:00:00Z",
+    "revision_date": "2021-11-03T00:00:00Z",
+    "idp_chain_ids": [
+      "B"
+    ],
+    "receptor_chain_ids": [
+      "A"
+    ],
+    "buried_surface_area": "198.76837"
+  },
+  "7VSI": {
+    "deposit_date": "2021-10-26T00:00:00Z",
+    "revision_date": "2022-02-16T00:00:00Z",
+    "idp_chain_ids": [
+      "B"
+    ],
+    "receptor_chain_ids": [
+      "A"
+    ],
+    "buried_surface_area": "42.19507"
+  },
+  "3C6N": {
+    "deposit_date": "2008-02-04T00:00:00Z",
+    "revision_date": "2020-10-14T00:00:00Z",
+    "idp_chain_ids": [
+      "A"
+    ],
+    "receptor_chain_ids": [
+      "B"
+    ],
+    "buried_surface_area": "144.20264"
+  },
+  "4FZ1": {
+    "deposit_date": "2012-07-05T00:00:00Z",
+    "revision_date": "2020-07-29T00:00:00Z",
+    "idp_chain_ids": [
+      "D"
+    ],
+    "receptor_chain_ids": [
+      "A"
+    ],
+    "buried_surface_area": "55.917603"
+  },
+  "2BBN": {
+    "deposit_date": "1992-07-16T00:00:00Z",
+    "revision_date": "2022-03-09T00:00:00Z",
+    "idp_chain_ids": [
+      "B"
+    ],
+    "receptor_chain_ids": [
+      "A"
+    ],
+    "buried_surface_area": "275.89478"
+  },
+  "3ABE": {
+    "deposit_date": "2009-12-07T00:00:00Z",
+    "revision_date": "2021-11-10T00:00:00Z",
+    "idp_chain_ids": [
+      "Z"
+    ],
+    "receptor_chain_ids": [
+      "C"
+    ],
+    "buried_surface_area": "106.2901"
+  },
+  "2JMX": {
+    "deposit_date": "2006-12-12T00:00:00Z",
+    "revision_date": "2022-03-09T00:00:00Z",
+    "idp_chain_ids": [
+      "B"
+    ],
+    "receptor_chain_ids": [
+      "A"
+    ],
+    "buried_surface_area": "91.54468"
+  },
+  "7CQP": {
+    "deposit_date": "2020-08-11T00:00:00Z",
+    "revision_date": "2021-06-23T00:00:00Z",
+    "idp_chain_ids": [
+      "C"
+    ],
+    "receptor_chain_ids": [
+      "B"
+    ],
+    "buried_surface_area": "74.21164"
+  },
+  "4JZZ": {
+    "deposit_date": "2013-04-03T00:00:00Z",
+    "revision_date": "2020-07-29T00:00:00Z",
+    "idp_chain_ids": [
+      "R"
+    ],
+    "receptor_chain_ids": [
+      "A"
+    ],
+    "buried_surface_area": "45.125732"
+  },
+  "1XTG": {
+    "deposit_date": "2004-10-21T00:00:00Z",
+    "revision_date": "2021-10-20T00:00:00Z",
+    "idp_chain_ids": [
+      "B"
+    ],
+    "receptor_chain_ids": [
+      "A"
+    ],
+    "buried_surface_area": "269.24097"
+  },
+  "1SSE": {
+    "deposit_date": "2004-03-24T00:00:00Z",
+    "revision_date": "2022-03-02T00:00:00Z",
+    "idp_chain_ids": [
+      "A"
+    ],
+    "receptor_chain_ids": [
+      "B"
+    ],
+    "buried_surface_area": "79.13684"
+  },
+  "7TYR": {
+    "deposit_date": "2022-02-14T00:00:00Z",
+    "revision_date": "2022-08-03T00:00:00Z",
+    "idp_chain_ids": [
+      "C"
+    ],
+    "receptor_chain_ids": [
+      "A"
+    ],
+    "buried_surface_area": "170.17383"
+  },
+  "1J2J": {
+    "deposit_date": "2003-01-05T00:00:00Z",
+    "revision_date": "2021-11-10T00:00:00Z",
+    "idp_chain_ids": [
+      "B"
+    ],
+    "receptor_chain_ids": [
+      "A"
+    ],
+    "buried_surface_area": "56.516968"
+  },
+  "7UZU": {
+    "deposit_date": "2022-05-09T00:00:00Z",
+    "revision_date": "2022-07-27T00:00:00Z",
+    "idp_chain_ids": [
+      "W"
+    ],
+    "receptor_chain_ids": [
+      "A"
+    ],
+    "buried_surface_area": "251.8208"
+  },
+  "2KJE": {
+    "deposit_date": "2009-05-27T00:00:00Z",
+    "revision_date": "2022-03-16T00:00:00Z",
+    "idp_chain_ids": [
+      "B"
+    ],
+    "receptor_chain_ids": [
+      "A"
+    ],
+    "buried_surface_area": "234.5022"
+  }
+}
