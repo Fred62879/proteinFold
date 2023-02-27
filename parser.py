@@ -24,6 +24,8 @@ def add_cmd_line_args(parser):
                         help='differentiate between datasets, define as whatever you want')
     parser.add_argument('--dataset_spec_name', type=str, default='rg-dimers',
                         help='name of json file containing input dataset information')
+    parser.add_argument('--pred_pdb_fn_str', type=str, default='ranked_0')
+    parser.add_argument('--ranking_fn_str', type=str, default='ranking_debug.json')
 
     parser.add_argument('--n_seqs', type=int, default=2, help='number of sequences to predict')
     parser.add_argument('--n_g', type=int, default=6, help='number of glycines thta compose the linker')
@@ -76,12 +78,12 @@ def add_hardcoded_args(config):
         config['input_fasta_dir_str'] += '_from_pdb'
 
     config['fnat_path_str'] = 'utils'
-    config['pred_pdb_fn_str'] = 'ranked_0.pdb'
-    config['ranking_fn_str'] = 'ranking_debug.json'
-    config['pruned_fn_str'] = 'ranked_0_pruned.pdb'
-    config['aligned_fn_str'] = 'ranked_0_aligned.pdb'
+
+    fn_prefix = config['pred_pdb_fn_str']
+    config['pruned_fn_str'] = f'{fn_prefix}_pruned.pdb'
+    config['aligned_fn_str'] = f'{fn_prefix}_aligned.pdb'
     config['superimposed_fn_str'] = 'superimposed.pdb'
-    config['removed_linker_fn_str'] = 'ranked_0_removed_linker.pdb'
+    config['removed_linker_fn_str'] = f'{fn_prefix}_removed_linker.pdb'
     config['second_structs_resid_ids_fn_str'] = 'second_structs_resid_ids'
 
     config['pdb_ids_fn_str'] = 'pdb_ids' # + config['pdb_cho']

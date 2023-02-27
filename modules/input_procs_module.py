@@ -92,7 +92,7 @@ class pipeline:
         # store original chain ids (order correspd. chain in gt pdb) & ordered chain ids
         self.read_chain_ids_all()
 
-        self.get_secondary_structure_ids()
+        # self.get_secondary_structure_ids()
 
     def locate_extra_atoms(self):
         for pdb_id in self.pdb_ids:

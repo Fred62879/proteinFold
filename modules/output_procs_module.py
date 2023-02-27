@@ -77,11 +77,10 @@ class pipeline:
             _, metric_names, metrics_done = utils.parse_csv(self.metric_fn)
         else: metrics_done = None
 
-        #pdb_ids = ['1JGN']
         for pdb_id in pdb_ids[:1]:
             cur_pdb_dir = join(self.output_dir, pdb_id + '.fasta')
             gt_pdb_fn = join(self.input_pdb_dir, pdb_id + '.pdb')
-            pred_pdb_fn = join(cur_pdb_dir, self.pred_pdb_fn_str)
+            pred_pdb_fn = join(cur_pdb_dir, self.pred_pdb_fn_str + ".pdb")
 
             pred_pdb_fn = self.process_predicted_pdb(pdb_id, gt_pdb_fn, pred_pdb_fn)
             cache = None if metrics_done is None or pdb_id not in metrics_done else metrics_done[pdb_id]
@@ -147,7 +146,6 @@ class pipeline:
             return
 
         if self.strategy == 'poly_g_link':
-            #print('  removing linker')
             removed_linker_fn = join(dir, self.removed_linker_fn_str)
             outils.remove_linker(pdb_id, pred_pdb_fn, removed_linker_fn,
                                  self.orig_chain_ids[pdb_id], self.chain_start_ids[pdb_id],
@@ -183,6 +181,7 @@ class pipeline:
         # whether the order of chains in gt pdb file is receptor-ligand. if not, set reverted as True
         reverted = self.ordered_chain_ids[pdb_id] != self.orig_chain_ids[pdb_id]
 
+        print(metrics_done)
         if self.dockq:
             if metrics_done is not None and 'irms' in metrics_done and 'Lrms' in metrics_done and 'dockQ' in metrics_done:
                 (irms, Lrms, dockQ) = metrics_done['irms'], metrics_done['Lrms'], metrics_done['dockQ']

@@ -6,11 +6,14 @@ from pymol import cmd
 #from utils import load_and_select
 
 def load_select_super(pdb_id, interface_dist):
-    pdb_fn = f'/media/fred/Local Disk/projects/bioinfo/data/input/ds1/pdbs/{pdb_id}.pdb'
-    pred_fn = f'/media/fred/Local Disk/projects/bioinfo/data/output/ds1_af_full/poly_g_20_fasta/{pdb_id}.fasta/ranked_0_removed_linker_aligned.pdb'
+    # data_dir = '/media/fred/working_drive/projects/bioinfo/data/'
+    data_dir = '/scratch/projects/bioinfo/data'
+    pdb_fn = f'{data_dir}/input/ds1/pdbs/{pdb_id}.pdb'
+    pred_fn = f'{data_dir}/output/ds1_af_full/poly_g_20_fasta/{pdb_id}.fasta/ranked_0_removed_linker_aligned.pdb'
     cmd.load(pdb_fn, 'native')
     cmd.load(pred_fn, 'pred')
-    with open('/media/fred/Local Disk/projects/bioinfo/data/input/ds1/poly_g_20_fasta/chain_names0.pkl','rb') as fp:
+
+    with open(f'{data_dir}/input/ds1/poly_g_20_fasta/chain_names0.pkl','rb') as fp:
         ids = pickle.load(fp)
     id = ids[pdb_id] # [receptor,ligand]
 
@@ -80,14 +83,25 @@ def load_and_select(interface_dist, gt_pdb_fn, pred_pdb_fn, ordered_chain_ids, b
     iRMS = cmd.align('native_interface_R','pred_interface_R')
     print(LRMS, iRMS)
 
+
 ds = 'ds2'
-pdb_id = '1BH8'
+pdb_id = '1A2X'
 interface_dist = 5
-pdb_fn = f'/media/fred/Local Disk/projects/bioinfo/data/input/{ds}/pdbs/{pdb_id}.pdb'
-pred_fn = f'/media/fred/Local Disk/projects/bioinfo/data/output/{ds}_af_full/poly_g_20/{pdb_id}.fasta/ranked_0_aligned.pdb'
-with open(f'/media/fred/Local Disk/projects/bioinfo/data/input/{ds}/ordered_chain_ids.pkl','rb') as fp:
+
+# data_dir = '/media/fred/working_drive/projects/bioinfo/data/'
+# pdb_fn = f'/media/fred/working_drive/projects/bioinfo/data/input/ds2/pdbs/{pdb_id}.pdb'
+# pred_fn = f'/media/fred/working_drive/projects/bioinfo/data/output/ds2_af_full/poly_g_20/{pdb_id}.fasta/ranked_0_aligned.pdb'
+
+data_dir = '/scratch/projects/bioinfo/data'
+pdb_fn = f'/scratch/projects/bioinfo/data/input/colabfold_evaluate/pdbs/{pdb_id}.pdb'
+# pred_fn = f'/scratch/projects/bioinfo/data/output/multimer_ptm/{pdb_id}_unrelaxed_rank_1_model_4.pdb'
+pred_fn = f'/scratch/projects/bioinfo/data/output/ptm_poly_g/{pdb_id}__unknown_description__unrelaxed_rank_1_model_4.pdb'
+
+with open(f'{data_dir}/input/{ds}/ordered_chain_ids.pkl','rb') as fp:
     ids = pickle.load(fp)
+
 ids = ids[pdb_id][:2] # [receptor,ligand]
 load_and_select(interface_dist, pdb_fn, pred_fn, ids, backbone=True)
 
-#run /media/fred/Local Disk/projects/bioinfo/code/pipeline/utils/pymol_demo.py
+# run /media/fred/working_drive/projects/bioinfo/code/pipeline/utils/pymol_demo.py
+# run /scratch/projects/bioinfo/code/pipeline/utils/pymol_demo.py
