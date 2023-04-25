@@ -586,10 +586,10 @@ masif/source/data_preparation/masif_site_label_surface::pymesh.save_mesh
 
 ** Apr 23
 *** Mon
-python batch.py ../../../data/input/test ../../../data/output/test_colabfold/ptm/1A2X.fasta --model-type AlphaFold2-ptm --pair-mode unpaired+paired
+python batch.py ../../../data/input/test ../../../data/output/test_colabfold --model-type AlphaFold2-ptm --pair-mode unpaired+paired --strategy ptm --max-num-queries 1
 
 - colabfold multimer
-python batch.py ../../../data/input/test ../../../data/output/test_colabfold/ --model-type AlphaFold2-multimer-v2 --pair-mode unpaired+paired
+python batch.py ../../../data/input/test ../../../data/output/test_colabfold/ --model-type AlphaFold2-multimer-v2 --pair-mode unpaired+paired --strategy multimer
 
 input fasta needs to be dimer in single fasta file
 two chains appended together, sep by a colon
