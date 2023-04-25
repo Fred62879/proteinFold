@@ -83,7 +83,7 @@ def add_hardcoded_args(config):
     config['pruned_fn_str'] = f'{fn_prefix}_pruned.pdb'
     config['aligned_fn_str'] = f'{fn_prefix}_aligned.pdb'
     config['superimposed_fn_str'] = 'superimposed.pdb'
-    config['removed_linker_fn_str'] = f'{fn_prefix}_removed_linker.pdb'
+    config['removed_linker_fn_str'] = f'{fn_prefix}_removed_linker'
     config['second_structs_resid_ids_fn_str'] = 'second_structs_resid_ids'
 
     config['pdb_ids_fn_str'] = 'pdb_ids' # + config['pdb_cho']
@@ -132,7 +132,8 @@ def add_path(config):
 
     if config['strategy'] == 'multimer':
         config['input_fasta_dir'] = config['source_fasta_dir']
-    else: config['input_fasta_dir'] = join(input_ds_dir, config['input_fasta_dir_str'])
+    else:
+        config['input_fasta_dir'] = join(input_ds_dir, config['input_fasta_dir_str'])
 
     # create dir
     for dir in [input_dir, input_ds_dir, config['output_dir'], config['input_pdb_dir'],

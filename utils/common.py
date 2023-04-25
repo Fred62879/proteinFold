@@ -40,10 +40,8 @@ def parse_csv(fn):
     data = read_csv(fn)
     metric_names = data[0].split(',')[1:]
 
-    print(metric_names)
     for i in range(1, len(data)):
         entries = data[i].split(',')
-        print(entries)
         pdb_id = entries[0]
         pdb_ids.append(pdb_id)
         cur_data = {}
@@ -198,7 +196,6 @@ def find_residue_diff_in_atom_counts(fn1, fn2):
 
 def parse_pdb_ids(dir, suffix):
     # collect all unique pdb ids in a given directory
-    print(dir)
     pdb_ids = list(set(listdir(dir))) #next(os.walk(dir))[1]
     if len(pdb_ids) == 0: return []
     pdb_ids = [pdb_id[:4] for pdb_id in pdb_ids if suffix in pdb_id]
@@ -336,11 +333,12 @@ def get_metric_plot_variables(pdb_id, gt_pdb_fn, pred_pdb_fn, ranking_fn, superi
         plddt = rank["1"]["plddt"] # for colabfold prediction
 
     # comprehensive sasa: (sasa_r + sasa_l - sasa_super)/2
-    if metrics_done is not None and 'sasa' in metrics_done:
-        sasa = metrics_done['sasa']
-    else:
-        sasa = get_sasa(pdb_id, gt_pdb_fn) + get_sasa(pdb_id, pred_pdb_fn) - get_sasa(pdb_id, superimposed_fn)
-        sasa /= 2
+    # if metrics_done is not None and 'sasa' in metrics_done:
+    #     sasa = metrics_done['sasa']
+    # else:
+    #     sasa = get_sasa(pdb_id, gt_pdb_fn) + get_sasa(pdb_id, pred_pdb_fn) - get_sasa(pdb_id, superimposed_fn)
+    #     sasa /= 2
+    sasa = 0
 
     return (len_ligand, num_intrfc_resid, plddt, sasa)
 

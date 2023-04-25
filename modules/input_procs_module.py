@@ -141,16 +141,22 @@ class pipeline:
             assert(exists(fn))
             with open(fn) as fp:
                 data = fp.readlines()
-            pdb_ids = np.array(data[0].split(','))
-            self.download_pdbs(pdb_ids)
+            if len(data) > 0:
+                pdb_ids = np.array(data[0].split(','))
+                pdb_ids[-1] = pdb_ids[-1][:4]
+                self.download_pdbs(pdb_ids)
+            else:
+                pdb_ids = None
+
         else:
             pdb_ids = utils.parse_pdb_ids(self.input_pdb_dir, '.pdb')
 
-        # for fasta downloading
-        pdb_ids.sort()
-        pdb_ids_str = reduce(lambda acc, cur: acc + ',' + cur, pdb_ids, '')
-        with open(self.pdb_ids_fn + '.txt', 'w') as fp:
-            fp.write(pdb_ids_str)
+        if pdb_ids is not None:
+            # for fasta downloading
+            pdb_ids.sort()
+            pdb_ids_str = reduce(lambda acc, cur: acc + ',' + cur, pdb_ids, '')
+            with open(self.pdb_ids_fn + '.txt', 'w') as fp:
+                fp.write(pdb_ids_str)
 
     def manually_download_fasta(self):
         ''' Wait for confirmation from user that fasta files are stored in directed folder
@@ -208,6 +214,7 @@ class pipeline:
         # download all specified pdbs. If pdb dir exists, only download pdb not presented in the dir
         pdb_downloaded = utils.parse_pdb_ids(self.input_pdb_dir, '.pdb')
         pdb_to_download = np.array(list(set(pdb_ids) - set(pdb_downloaded)))
+        print(pdb_downloaded, pdb_ids, pdb_to_download)
         pdb_to_download.sort()
 
         # save pdb ids as a str in text file for pdb downloading

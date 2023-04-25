@@ -79,23 +79,26 @@ def load_and_select(interface_dist, gt_pdb_fn, pred_pdb_fn, ordered_chain_ids, b
     cmd.color('green','pred_interface_L')
 
     cmd.super('native_R','pred_R')
-    LRMS = cmd.rms_cur('native_L','pred_L')
-    iRMS = cmd.align('native_interface_R','pred_interface_R')
-    print(LRMS, iRMS)
+    #LRMS = cmd.rms_cur('native_L','pred_L')
+    #iRMS = cmd.align('native_interface_R','pred_interface_R')
+    #print(LRMS, iRMS)
 
 
 ds = 'ds2'
-pdb_id = '1A2X'
+pdb_id = '5U4K'
 interface_dist = 5
+
+
+# colabfold have chain id as B/C while native is A/B
 
 # data_dir = '/media/fred/working_drive/projects/bioinfo/data/'
 # pdb_fn = f'/media/fred/working_drive/projects/bioinfo/data/input/ds2/pdbs/{pdb_id}.pdb'
 # pred_fn = f'/media/fred/working_drive/projects/bioinfo/data/output/ds2_af_full/poly_g_20/{pdb_id}.fasta/ranked_0_aligned.pdb'
 
 data_dir = '/scratch/projects/bioinfo/data'
-pdb_fn = f'/scratch/projects/bioinfo/data/input/colabfold_evaluate/pdbs/{pdb_id}.pdb'
-# pred_fn = f'/scratch/projects/bioinfo/data/output/multimer_ptm/{pdb_id}_unrelaxed_rank_1_model_4.pdb'
-pred_fn = f'/scratch/projects/bioinfo/data/output/ptm_poly_g/{pdb_id}__unknown_description__unrelaxed_rank_1_model_4.pdb'
+pdb_fn = f'/scratch/projects/bioinfo/data/input/test/pdbs/{pdb_id}.pdb'
+#pred_fn = f'/scratch/projects/bioinfo/data/output/test_colabfold/poly_g_20/{pdb_id}.fasta/unrelaxed_rank_1_removed_linker.pdb'
+pred_fn = f'/scratch/projects/bioinfo/data/output/test_colabfold/poly_g_20/{pdb_id}.fasta/unrelaxed_rank_1_removed_linker_A_B.pdb'
 
 with open(f'{data_dir}/input/{ds}/ordered_chain_ids.pkl','rb') as fp:
     ids = pickle.load(fp)

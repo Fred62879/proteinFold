@@ -77,7 +77,7 @@ class pipeline:
             _, metric_names, metrics_done = utils.parse_csv(self.metric_fn)
         else: metrics_done = None
 
-        for pdb_id in pdb_ids[:1]:
+        for pdb_id in pdb_ids:
             cur_pdb_dir = join(self.output_dir, pdb_id + '.fasta')
             gt_pdb_fn = join(self.input_pdb_dir, pdb_id + '.pdb')
             pred_pdb_fn = join(cur_pdb_dir, self.pred_pdb_fn_str + ".pdb")
@@ -87,8 +87,9 @@ class pipeline:
             select_residue_ids = None if self.second_structs_resid_ids is None \
                 else self.second_structs_resid_ids[pdb_id]
 
-            cur_metrics = self.calculate_metrics(cur_pdb_dir, pdb_id, gt_pdb_fn, pred_pdb_fn, cache,
-                                                 selected_residue_ids=select_residue_ids)
+            cur_metrics = self.calculate_metrics(
+                cur_pdb_dir, pdb_id, gt_pdb_fn, pred_pdb_fn, cache,
+                selected_residue_ids=select_residue_ids)
             metrics.append(cur_metrics)
 
             '''
@@ -146,9 +147,10 @@ class pipeline:
             return
 
         if self.strategy == 'poly_g_link':
-            removed_linker_fn = join(dir, self.removed_linker_fn_str)
+            chain_ids = self.orig_chain_ids[pdb_id]
+            removed_linker_fn = join(dir, f"{self.removed_linker_fn_str}_{chain_ids[0]}_{chain_ids[1]}.pdb")
             outils.remove_linker(pdb_id, pred_pdb_fn, removed_linker_fn,
-                                 self.orig_chain_ids[pdb_id], self.chain_start_ids[pdb_id],
+                                 chain_ids, self.chain_start_ids[pdb_id],
                                  self.gt_chain_bd_ids[pdb_id], self.n_g, self.generate_fasta_from_pdb)
             pred_pdb_fn = removed_linker_fn
 
@@ -181,10 +183,10 @@ class pipeline:
         # whether the order of chains in gt pdb file is receptor-ligand. if not, set reverted as True
         reverted = self.ordered_chain_ids[pdb_id] != self.orig_chain_ids[pdb_id]
 
-        print(metrics_done)
         if self.dockq:
             if metrics_done is not None and 'irms' in metrics_done and 'Lrms' in metrics_done and 'dockQ' in metrics_done:
-                (irms, Lrms, dockQ) = metrics_done['irms'], metrics_done['Lrms'], metrics_done['dockQ']
+                # (irms, Lrms, dockQ) = metrics_done['irms'], metrics_done['Lrms'], metrics_done['dockQ']
+                cur_metrics = metrics_done
             else:
                 cur_metrics = [pdb_id]
 

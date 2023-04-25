@@ -524,6 +524,7 @@ sudo apt-get install libboost-all-dev
 * 2023
 ** Jan 15
 *** Thu
+- colabfold install
 conda create --name colabfold_env python=3.7
 
 pip install colabfold[alphafold] git+file:///scratch/projects/bioinfo/code/colabfold      # tries to use pre-compiled wheels
@@ -563,14 +564,36 @@ Copying first alphafold from site-packages to /colabfold and back sys path
 Move batch.py (whatever script to run) one dir up (from colabfold/colabfold to colabfold/)
 
 *** Sat
-python apps/batch.py ../../data/input/test_colabfold/multimer ../../data/output/multimer_ptm/ --model-type AlphaFold2-multimer-v2 --pair-mode unpaired+paired
+python apps/batch.py ../../data/input/test/multimer ../../data/output/multimer_ptm/ --model-type AlphaFold2-multimer-v2 --pair-mode unpaired+paired
 
 ** Feb 19
 *** Tue
-python batch.py ../../../data/input/colabfold_run/multimer_one_file/1A2X.fasta ../../../data/output/multimer_msa_ptm_model/ --model-type AlphaFold2-ptm --pair-mode unpaired+paired
-python batch.py ../../../data/input/colabfold_run/multimer_one_file/1A2X.fasta ../../../data/output/multimer_msa_ptm_model/ --model-type AlphaFold2-multimer-v2 --pair-mode unpaired+paired
+python batch.py ../../../data/input/test/multimer ../../../data/output/test_colabfold/ --model-type AlphaFold2-multimer-v2 --pair-mode unpaired+paired
 
-python batch.py ../../../data/input/colabfold_run/poly_g_20/1A2X.fasta ../../../data/output/multimer_msa_ptm_model/ --model-type AlphaFold2-ptm --pair-mode unpaired+paired
+python batch.py ../../../data/input/ds2/poly_g_20/1A2X.fasta ../../../data/output/test_colabfold_evaluate.poly_g_20 --model-type AlphaFold2-ptm --pair-mode unpaired+paired --use-gpu-relax
 
 
-python batch.py ../../../data/input/ds2/poly_g_20/1A2X.fasta ../../../data/output/test --model-type AlphaFold2-ptm --pair-mode unpaired+paired --relax --use-gpu-relax
+** Feb 26
+*** Mon
+- surface data of msaif
+they use msms to calculate protein surface
+masif/source/data_preparation/01-pdb_extract_and_triangulate
+
+- ply file saving
+masif/source/data_preparation/01-pdb_extract_and_triangulate::save_ply
+masif/source/data_preparation/masif_site_label_surface::pymesh.save_mesh
+
+
+** Apr 23
+*** Mon
+python batch.py ../../../data/input/test ../../../data/output/test_colabfold/ptm/1A2X.fasta --model-type AlphaFold2-ptm --pair-mode unpaired+paired
+
+- colabfold multimer
+python batch.py ../../../data/input/test ../../../data/output/test_colabfold/ --model-type AlphaFold2-multimer-v2 --pair-mode unpaired+paired
+
+input fasta needs to be dimer in single fasta file
+two chains appended together, sep by a colon
+
+*** Tue
+- add space to multimer msa
+python pad_msa.py --in-fname ../../../data/output/test_colabfold/multimer/1A2X.fasta/1A2X.a3m --out-fname ../../../data/output/test_colabfold/multimer/1A2X.fasta/1A2X_pad.a3m --n-g 20

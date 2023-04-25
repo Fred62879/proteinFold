@@ -104,7 +104,7 @@ def renumber_residue_perdicted_pdb(in_fn, out_fn, orig_chain_ids, gt_chain_bd_id
     ppdb = PandasPdb()
     _ = ppdb.read_pdb(in_fn)
     df = ppdb.df['ATOM']
-    print(df['chain_id'], orig_chain_ids)
+    # print(df['chain_id'], orig_chain_ids)
 
     renumber_atom_ids, renumber_offsets = [], []
     for chain_id, gt_chain_bd_id in zip(orig_chain_ids, gt_chain_bd_ids):
