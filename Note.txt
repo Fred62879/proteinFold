@@ -589,7 +589,7 @@ masif/source/data_preparation/masif_site_label_surface::pymesh.save_mesh
 python batch.py ../../../data/input/test ../../../data/output/test_colabfold --model-type AlphaFold2-ptm --pair-mode unpaired+paired --strategy ptm --max-num-queries 1
 
 - colabfold multimer
-python batch.py ../../../data/input/test ../../../data/output/test_colabfold/ --model-type AlphaFold2-multimer-v2 --pair-mode unpaired+paired --strategy multimer
+python batch.py ../../../data/input/test ../../../data/output/test_colabfold/ --model-type AlphaFold2-multimer-v2 --pair-mode unpaired+paired --strategy multimer --max-num-queries 1
 
 input fasta needs to be dimer in single fasta file
 two chains appended together, sep by a colon
@@ -597,3 +597,17 @@ two chains appended together, sep by a colon
 *** Tue
 - add space to multimer msa
 python pad_msa.py --in-fname ../../../data/output/test_colabfold/multimer/1A2X.fasta/1A2X.a3m --out-fname ../../../data/output/test_colabfold/multimer/1A2X.fasta/1A2X_pad.a3m --n-g 20
+
+
+*** Wed
+- colabfold str to msa
+
+for multimer, example paired msa are
+  ['>101\nTDQQAEARSYLSEEMIAEFKAAFDMFDADGGGDISVKELGTVMRMLGQTPTKEELDAIIEEVDEDGSGTIDFEEFLVMMVRQMKEDA   KGKSEEELAECFRIFDRNADGYIDAEELAEIFRASGEHVTDEEIESLMKDGDKNNDGRIDFDEFLKMMEGVQ\n', '>102\nGDEEKRNRAI   TARRQHLKSVMLQIAATELEKEEGRREAEKQNYLAEH\n'
+  ]
+batch.py::paire_sequences converts above to the first three lines of msa file:
+  #159,47     1,1
+  >101      102
+  TDQQAEAR...
+
+
